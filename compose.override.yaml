@@ -111,5 +111,19 @@ services:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   tailscale-traefik:
     image: tailscale/tailscale@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680
+    # Services on the bridge network resolve each other by public hostname, but
+    # those names point at the tailnet, which the host cannot route to. Alias
+    # them onto Traefik, which shares this container's network namespace.
+    networks:
+      default:
+        aliases:
+          - plc.${PARTITION}.${DOMAIN}
+          - pds.${PARTITION}.${DOMAIN}
+          - relay.${PARTITION}.${DOMAIN}
+          - jetstream.${PARTITION}.${DOMAIN}
+          - bsky.${PARTITION}.${DOMAIN}
+          - ozone.${PARTITION}.${DOMAIN}
+          - feedgen.${PARTITION}.${DOMAIN}
+          - social.${PARTITION}.${DOMAIN}
   traefik-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
