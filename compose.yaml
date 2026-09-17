@@ -1,0 +1,4 @@
+name: server-infrastructure
+
+include:
+  - upstream/docker-compose.yml

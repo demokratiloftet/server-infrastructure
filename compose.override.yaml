@@ -1,0 +1,89 @@
+# Uses !override and nested includes; validated with Docker Compose 5.5.1.
+# Image digests are resolved from upstream tags; upgrade them deliberately.
+services:
+  update-dns:
+    image: tailscale/tailscale@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680
+    environment: !override
+      VERCEL_API_TOKEN: ${VERCEL_API_TOKEN:?Set VERCEL_API_TOKEN in .env}
+      VERCEL_TEAM_ID: ${VERCEL_TEAM_ID:?Set VERCEL_TEAM_ID in .env}
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+      PARTITION: ${PARTITION:?Set PARTITION in .env}
+      TS_STATE_DIR: /var/lib/tailscale
+    volumes:
+      - ./scripts/update-dns.sh:/update-dns.sh:ro
+  traefik:
+    image: traefik:v3.7.11@sha256:5203c3f39ca70de6790d964624e042463ffbd57715bc82be155cf224c0dd5144
+    environment: !override
+      VERCEL_API_TOKEN: ${VERCEL_API_TOKEN:?Set VERCEL_API_TOKEN in .env}
+      VERCEL_TEAM_ID: ${VERCEL_TEAM_ID:?Set VERCEL_TEAM_ID in .env}
+    volumes:
+      - ./certs:/certs
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --api.dashboard=true
+      - --ping=true
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=vercel
+      - --certificatesresolvers.letsencrypt.acme.dnsChallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=letsencrypt
+      - --entrypoints.websecure.http.tls.domains[0].main=${PARTITION}.${DOMAIN}
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.${PARTITION}.${DOMAIN}
+      - --log.level=DEBUG
+  bsky:
+    image: ghcr.io/eurosky-social/atproto:bsky-latest@sha256:7bfbcfd07e392b5bdbe2170a7729c6e8c0dddd8fba8676f258b26f6d68037a75
+  bsky-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  e2e-jest:
+    image: node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+  e2e-playwright:
+    image: mcr.microsoft.com/playwright:v1.55.1-noble@sha256:2f29369043d81d6d69a815ceb80760f55e85f5020371ad06a4d996f18503ad1c
+  feedgen:
+    image: ghcr.io/eurosky-social/feed-generator:feedgen-latest@sha256:1885a206205431a3447b7273e4eb8e589a2194717fca4fd62eb82a167c346627
+  feedgen-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  feedgen-post-setup:
+    image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+  jetstream:
+    image: ghcr.io/eurosky-social/jetstream:latest@sha256:017705bc8775fb04e3dcffd1e6ea504ec818cc646c45c180bef6bf1a837f598f
+  jetstream-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
+  ozone:
+    image: ghcr.io/bluesky-social/ozone:latest@sha256:a783cd27fe343276b6826d9f81a9221b815f24bece001c53ce15a65c4318f7ed
+  ozone-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  pds:
+    image: ghcr.io/bluesky-social/pds:latest@sha256:05e164855fa1a3cf251c002210c46f8c86e7ae27bddc7a96045da25483840826
+  pds-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  plc:
+    image: ghcr.io/eurosky-social/did-method-plc:latest@sha256:69c74075e7da7b2f788783004d87f460cf5fe4dbd3c5bc207be34b751e1b3c25
+  plc-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  postgres:
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+  redis:
+    image: redis:7-bookworm@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+  relay:
+    image: ghcr.io/eurosky-social/indigo:relay-latest@sha256:41362f1fec5139c73516ace48b2e419d77f51e02834f1195d9373b65cfe452bf
+  relay-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  relay-post-setup:
+    image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+  social:
+    image: ghcr.io/eurosky-social/social-app:bskyweb-latest@sha256:6d3b8819e1b43918fb963aa42e40398cb3e9db99a0ac4f5421cfc709c241d337
+  social-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+  tailscale-traefik:
+    image: tailscale/tailscale@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680
+  traefik-https-check:
+    image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
