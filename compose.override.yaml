@@ -40,7 +40,9 @@ services:
       - --entrypoints.websecure.http.tls.domains[0].sans=*.${PARTITION}.${DOMAIN}
       - --log.level=DEBUG
   bsky:
-    image: ghcr.io/eurosky-social/atproto:bsky-latest@sha256:7bfbcfd07e392b5bdbe2170a7729c6e8c0dddd8fba8676f258b26f6d68037a75
+    # bsky-latest ships package.json "type": "module" with a CommonJS
+    # api-zeppelin.js; pinned back to the last build without that regression.
+    image: ghcr.io/eurosky-social/atproto:bsky-2026-04-20T13-43-57-00-00@sha256:c097936d51b4c3eebdecdde57528f3e17735af23e95784b3c7fba8c46ee1c597
     environment:
       BSKY_ADMIN_PASSWORDS: ${BSKY_ADMIN_PASSWORD:?Set BSKY_ADMIN_PASSWORD in .env}
       BSKY_SERVICE_SIGNING_KEY: ${BSKY_SERVICE_SIGNING_KEY:?Set BSKY_SERVICE_SIGNING_KEY in .env}
