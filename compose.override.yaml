@@ -39,6 +39,9 @@ services:
       - --log.level=DEBUG
   bsky:
     image: ghcr.io/eurosky-social/atproto:bsky-latest@sha256:7bfbcfd07e392b5bdbe2170a7729c6e8c0dddd8fba8676f258b26f6d68037a75
+    environment:
+      BSKY_ADMIN_PASSWORDS: ${BSKY_ADMIN_PASSWORD:?Set BSKY_ADMIN_PASSWORD in .env}
+      BSKY_SERVICE_SIGNING_KEY: ${BSKY_SERVICE_SIGNING_KEY:?Set BSKY_SERVICE_SIGNING_KEY in .env}
   bsky-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   e2e-jest:
@@ -59,10 +62,17 @@ services:
     image: otel/opentelemetry-collector-contrib:latest@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
   ozone:
     image: ghcr.io/bluesky-social/ozone:latest@sha256:a783cd27fe343276b6826d9f81a9221b815f24bece001c53ce15a65c4318f7ed
+    environment:
+      OZONE_ADMIN_PASSWORD: ${OZONE_ADMIN_PASSWORD:?Set OZONE_ADMIN_PASSWORD in .env}
+      OZONE_SIGNING_KEY_HEX: ${OZONE_SIGNING_KEY_HEX:?Set OZONE_SIGNING_KEY_HEX in .env}
   ozone-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   pds:
     image: ghcr.io/bluesky-social/pds:latest@sha256:05e164855fa1a3cf251c002210c46f8c86e7ae27bddc7a96045da25483840826
+    environment:
+      PDS_ADMIN_PASSWORD: ${PDS_ADMIN_PASSWORD:?Set PDS_ADMIN_PASSWORD in .env}
+      PDS_JWT_SECRET: ${PDS_JWT_SECRET:?Set PDS_JWT_SECRET in .env}
+      PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX: ${PDS_PLC_ROTATION_KEY:?Set PDS_PLC_ROTATION_KEY in .env}
   pds-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   plc:
@@ -71,14 +81,25 @@ services:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   postgres:
     image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    # Upstream's bare "5432" publishes to a random port on every interface.
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports: !override
+      - "127.0.0.1:5432:5432"
   redis:
     image: redis:7-bookworm@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
   relay:
     image: ghcr.io/eurosky-social/indigo:relay-latest@sha256:41362f1fec5139c73516ace48b2e419d77f51e02834f1195d9373b65cfe452bf
+    environment:
+      RELAY_ADMIN_PASSWORD: ${RELAY_ADMIN_PASSWORD:?Set RELAY_ADMIN_PASSWORD in .env}
   relay-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   relay-post-setup:
     image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+    environment:
+      RELAY_ADMIN_PASSWORD: ${RELAY_ADMIN_PASSWORD:?Set RELAY_ADMIN_PASSWORD in .env}
+    volumes:
+      - ./scripts/relay-post-setup.sh:/post-setup.sh:ro
   social:
     image: ghcr.io/eurosky-social/social-app:bskyweb-latest@sha256:6d3b8819e1b43918fb963aa42e40398cb3e9db99a0ac4f5421cfc709c241d337
   social-https-check:
