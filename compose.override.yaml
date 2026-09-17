@@ -100,6 +100,9 @@ services:
     image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
     environment:
       RELAY_ADMIN_PASSWORD: ${RELAY_ADMIN_PASSWORD:?Set RELAY_ADMIN_PASSWORD in .env}
+    # The relay is only reachable on the tailnet, which the default bridge
+    # network has no route to.
+    network_mode: service:tailscale-traefik
     volumes:
       - ./scripts/relay-post-setup.sh:/post-setup.sh:ro
   social:

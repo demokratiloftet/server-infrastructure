@@ -4,7 +4,7 @@
 set -eu
 
 echo "Requesting relay to crawl PDS..."
-curl --fail-with-body --silent --show-error \
+curl --fail-with-body --silent --show-error --max-time 30 \
   -u "admin:${RELAY_ADMIN_PASSWORD}" \
   -X POST "https://${RELAY_HOST}/admin/pds/requestCrawl" \
   -H "Content-Type: application/json" \
