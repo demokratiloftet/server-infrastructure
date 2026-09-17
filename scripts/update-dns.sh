@@ -34,7 +34,7 @@ get_tailscale_ip() {
 
 get_record_id() {
   local record_name="$1"
-  curl --fail-with-body --silent --show-error \
+  curl --fail-with-body --silent --show-error --max-time 30 \
     "https://api.vercel.com/v5/domains/${DOMAIN}/records?teamId=${VERCEL_TEAM_ID}&limit=100" \
     -H "Authorization: Bearer ${VERCEL_API_TOKEN}" \
     -H "Content-Type: application/json" |
@@ -48,7 +48,7 @@ create_dns_record() {
   echo "Creating DNS record ${name} -> ${ip}"
   jq -n --arg name "$name" --arg value "$ip" \
     '{type: "A", name: $name, value: $value, ttl: 60, comment: "Private ATProto development network"}' |
-    curl --fail-with-body --silent --show-error -X POST \
+    curl --fail-with-body --silent --show-error --max-time 30 -X POST \
       "https://api.vercel.com/v2/domains/${DOMAIN}/records?teamId=${VERCEL_TEAM_ID}" \
       -H "Authorization: Bearer ${VERCEL_API_TOKEN}" \
       -H "Content-Type: application/json" \
@@ -63,7 +63,7 @@ update_dns_record() {
   echo "Updating DNS record ${name} -> ${ip}"
   jq -n --arg name "$name" --arg value "$ip" \
     '{type: "A", name: $name, value: $value, ttl: 60, comment: "Private ATProto development network"}' |
-    curl --fail-with-body --silent --show-error -X PATCH \
+    curl --fail-with-body --silent --show-error --max-time 30 -X PATCH \
       "https://api.vercel.com/v1/domains/records/${record_id}?teamId=${VERCEL_TEAM_ID}" \
       -H "Authorization: Bearer ${VERCEL_API_TOKEN}" \
       -H "Content-Type: application/json" \

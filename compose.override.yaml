@@ -11,6 +11,8 @@ services:
       TS_STATE_DIR: /var/lib/tailscale
     volumes:
       - ./scripts/update-dns.sh:/update-dns.sh:ro
+    command: !override
+      - timeout 120 apk add --no-cache curl jq && /update-dns.sh
   traefik:
     image: traefik:v3.7.11@sha256:5203c3f39ca70de6790d964624e042463ffbd57715bc82be155cf224c0dd5144
     environment: !override
