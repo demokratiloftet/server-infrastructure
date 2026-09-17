@@ -158,6 +158,12 @@ main() {
   local full_domain="${PARTITION}.${DOMAIN}"
   echo "Updating DNS for ${full_domain} to ${ip}"
 
+  # Explicit records first: an ACME challenge on _acme-challenge.<host> turns
+  # <host> into an empty non-terminal, which stops the wildcard from covering it.
+  for host in traefik plc pds relay jetstream bsky ozone feedgen social; do
+    upsert_dns_record "${host}.${PARTITION}" "$ip"
+  done
+
   upsert_dns_record "*.${PARTITION}" "$ip"
   upsert_dns_record "*.pds.${PARTITION}" "$ip"
 
