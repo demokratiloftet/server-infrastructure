@@ -4,3 +4,10 @@
 certs/
 playwright-report/
 test-results/
+public-demo/.tls/
+public-demo/.build/
+public-demo/node_modules/
+public-demo/calendar/node_modules/
+public-demo/test-results/
+public-demo/test/.runtime/
+__pycache__/

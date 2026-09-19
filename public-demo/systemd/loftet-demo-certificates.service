@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh Loftet demo TLS files from the private Traefik certificate store
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/root/server-infrastructure
+ExecStart=/usr/bin/python3 /root/server-infrastructure/public-demo/prepare.py --certificates-only
+UMask=0077

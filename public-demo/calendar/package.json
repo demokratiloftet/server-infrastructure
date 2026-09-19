@@ -1,0 +1,26 @@
+{
+  "name": "loftet-calendar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "docker compose up -d --build --wait",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f calendar",
+    "test": "node --test test/*.test.mjs",
+    "test:integration": "node test/integration.mjs",
+    "verify": "sh infra/verify.sh",
+    "verify:claim": "node src/cli.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.12",
+    "oidc-provider": "9.12.2",
+    "@loftet/auth": "file:packages/auth"
+  },
+  "workspaces": [
+    "packages/auth"
+  ]
+}

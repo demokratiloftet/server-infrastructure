@@ -1,0 +1,348 @@
+# Explicit opt-in overlay; defaults to loopback-only HTTPS.
+services:
+  private-dns:
+    init: true
+    read_only: true
+    cap_drop: &id001
+    - ALL
+    security_opt: &id002
+    - no-new-privileges:true
+    restart: unless-stopped
+    image: node:22-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2
+    command:
+    - node
+    - /dns.mjs
+    volumes:
+    - ./public-demo/dns.mjs:/dns.mjs:ro
+    environment:
+      DEMO_DNS_RECORDS: ${DEMO_DNS_RECORDS:?Run public-demo/prepare.py}
+    networks:
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.2
+  tailscale-traefik:
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.3
+      tailnet-egress: {}
+  traefik:
+    depends_on: !override
+      tailscale-traefik:
+        condition: service_started
+      private-dns:
+        condition: service_started
+  postgres:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.4
+    ports: !reset []
+  redis:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.5
+  plc:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.6
+  pds:
+    depends_on:
+      private-dns:
+        condition: service_started
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.7
+    image: loftet-pds:private-demo
+    build:
+      context: ./public-demo
+      dockerfile: Dockerfile.pds
+    labels:
+      traefik.http.routers.pds.tls.domains[1].main: ${PARTITION}.${DOMAIN}
+      traefik.http.routers.pds.tls.domains[1].sans: '*.${PARTITION}.${DOMAIN}'
+    environment:
+      PDS_DEV_MODE: 'false'
+      PDS_DISABLE_SSRF_PROTECTION: 'false'
+      PDS_RATE_LIMITS_ENABLED: 'true'
+      PDS_INVITE_REQUIRED: 'false'
+      PDS_CRAWLERS: ''
+      PDS_ACCEPTING_REPO_IMPORTS: 'false'
+      DEMO_CALENDAR_ORIGIN: https://demo-calendar.${PARTITION}.${DOMAIN}
+      LOG_LEVEL: warn
+  relay:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.8
+    environment:
+      RELAY_DISABLE_REQUEST_CRAWL: 'true'
+      LOG_LEVEL: warn
+    depends_on: !override
+      private-dns:
+        condition: service_started
+      pds:
+        condition: service_healthy
+  jetstream:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.9
+    depends_on: !override
+      private-dns:
+        condition: service_started
+      pds:
+        condition: service_healthy
+  feedgen:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.10
+    depends_on: !override
+      private-dns:
+        condition: service_started
+      pds:
+        condition: service_healthy
+  ozone:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.11
+  bsky:
+    restart: unless-stopped
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.12
+    environment:
+      DD_TRACE_ENABLED: 'false'
+      LOG_LEVEL: warn
+      BSKY_VIDEO_PLAYLIST_URL_PATTERN: https://demo-social.${PARTITION}.${DOMAIN}/disabled/video/%s/%s
+      BSKY_VIDEO_THUMBNAIL_URL_PATTERN: https://demo-social.${PARTITION}.${DOMAIN}/disabled/video/%s/%s
+    depends_on: !override
+      private-dns:
+        condition: service_started
+      pds:
+        condition: service_healthy
+  social:
+    profiles: [private-legacy]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    networks: !override
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.13
+    depends_on: !override
+      private-dns:
+        condition: service_started
+      pds:
+        condition: service_healthy
+  update-dns:
+    profiles:
+    - private-bootstrap
+  relay-post-setup:
+    profiles:
+    - private-bootstrap
+  feedgen-post-setup:
+    profiles:
+    - private-bootstrap
+  pds-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    environment:
+      HEALTHCHECK_PATH: /xrpc/_health
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  plc-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    environment:
+      HEALTHCHECK_PATH: /_health
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  bsky-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  relay-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    environment:
+      HEALTHCHECK_PATH: /_health
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  jetstream-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  feedgen-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  ozone-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  social-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    network_mode: !reset ""
+    networks: [default]
+    profiles: [private-legacy]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  traefik-https-check:
+    healthcheck:
+      test: [CMD-SHELL, 'test "$(curl -sS --max-time 8 --output /dev/null --write-out "%{http_code}" "https://$$HEALTHCHECK_URL$${HEALTHCHECK_PATH:-/}")" = 200']
+    network_mode: !reset ""
+    networks: [default]
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+  public-calendar:
+    init: true
+    read_only: true
+    cap_drop: *id001
+    security_opt: *id002
+    restart: unless-stopped
+    image: loftet-public-calendar:private-demo
+    build:
+      context: ./public-demo
+      dockerfile: Dockerfile.calendar
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    tmpfs:
+    - /tmp:rw,nosuid,nodev,size=8m
+    volumes:
+    - public-calendar-auth:/data/auth
+    networks:
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.15
+    environment:
+      APP_ENV: public-demo
+      APP_ORIGIN: https://demo-calendar.${PARTITION}.${DOMAIN}
+      PDS_URL: http://pds:3000
+      ATPROTO_PDS_ORIGIN: https://pds.${PARTITION}.${DOMAIN}
+      ATPROTO_PLC_URL: https://plc.${PARTITION}.${DOMAIN}
+      AUTH_FETCH_ROUTES_JSON: '{"https://pds.${PARTITION}.${DOMAIN}":"https://pds.${PARTITION}.${DOMAIN}","https://plc.${PARTITION}.${DOMAIN}":"https://plc.${PARTITION}.${DOMAIN}"}'
+      DEMO_SELF_SERVICE: 'true'
+      AUTH_ENCRYPTION_KEY: ${DEMO_AUTH_ENCRYPTION_KEY:?Run public-demo/prepare.py}
+      ORGANISER_HANDLE: ${DEMO_ORGANISER_HANDLE:?Run public-demo/prepare.py}
+      ORGANISER_PASSWORD: ${DEMO_ORGANISER_PASSWORD:?Run public-demo/prepare.py}
+      ISSUER_HANDLE: ${DEMO_ISSUER_HANDLE:?Run public-demo/prepare.py}
+      ISSUER_PASSWORD: ${DEMO_ISSUER_PASSWORD:?Run public-demo/prepare.py}
+      ISSUER_DID: ${DEMO_ISSUER_DID:?Run public-demo/prepare.py}
+      DEMO_ACCESS_KEY: ${DEMO_ADMIN_KEY:?Run public-demo/prepare.py}
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: server-infrastructure_private-demo
+      traefik.http.routers.public-calendar.rule: Host(`demo-calendar.${PARTITION}.${DOMAIN}`)
+      traefik.http.routers.public-calendar.entrypoints: websecure
+      traefik.http.routers.public-calendar.tls.certresolver: letsencrypt
+      traefik.http.services.public-calendar.loadbalancer.server.port: '3000'
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - require('node:http').get('http://127.0.0.1:3000/health',{headers:{host:new
+        URL(process.env.APP_ORIGIN).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))
+      interval: 10s
+      timeout: 3s
+      retries: 10
+  public-gateway:
+    # Local liveness only; TLS trust is checked separately by the acceptance client.
+    healthcheck:
+      test: [CMD, node, -e, "const r=require('node:https').get({host:'127.0.0.1',port:8443,servername:process.env.DEMO_SOCIAL_HOST,headers:{host:process.env.DEMO_SOCIAL_HOST},rejectUnauthorized:false},s=>process.exit(s.statusCode===200?0:1));r.setTimeout(2000,()=>{r.destroy();process.exit(1)});r.on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    init: true
+    read_only: true
+    cap_drop: *id001
+    security_opt: *id002
+    restart: unless-stopped
+    image: loftet-public-gateway:private-demo
+    build:
+      context: ./public-demo
+      args:
+        PDS_HOST: pds.${PARTITION}.${DOMAIN}
+        DEMO_BASE_DOMAIN: ${PARTITION}.${DOMAIN}
+        FEED_OWNER_DID: ${DEMO_FEED_OWNER_DID:?Run public-demo/prepare.py}
+    cap_add:
+    - NET_ADMIN
+    - SETUID
+    - SETGID
+    - SETPCAP
+    dns:
+    - ${DEMO_NET_PREFIX:-10.249.90}.2
+    tmpfs:
+    - /tmp:rw,nosuid,nodev,size=8m
+    volumes:
+    - ./public-demo/.tls:/tls:ro
+    ports:
+    - ${DEMO_BIND_IP:-127.0.0.1}:${DEMO_HTTPS_PORT:-8443}:8443
+    networks:
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.20
+      demo-ingress: {}
+    depends_on:
+      pds:
+        condition: service_healthy
+      public-calendar:
+        condition: service_healthy
+    environment:
+      DEMO_BASE_DOMAIN: ${PARTITION}.${DOMAIN}
+      DEMO_SOCIAL_HOST: demo-social.${PARTITION}.${DOMAIN}
+      DEMO_CALENDAR_HOST: demo-calendar.${PARTITION}.${DOMAIN}
+      PDS_HOST: pds.${PARTITION}.${DOMAIN}
+      LABELER_DID: ${OZONE_ADMIN_DID}
+      DEMO_PRIVATE_SUBNET: ${DEMO_NET_PREFIX:-10.249.90}.0/24
+      DEMO_DNS_IP: ${DEMO_NET_PREFIX:-10.249.90}.2
+      TLS_DIRECTORY: /tls
+networks:
+  default:
+    name: server-infrastructure_private-demo
+    internal: true
+    enable_ipv6: false
+    ipam:
+      config:
+      - subnet: ${DEMO_NET_PREFIX:-10.249.90}.0/24
+        ip_range: ${DEMO_NET_PREFIX:-10.249.90}.128/25
+  tailnet-egress: {}
+  demo-ingress: {}
+volumes:
+  public-calendar-auth: {}

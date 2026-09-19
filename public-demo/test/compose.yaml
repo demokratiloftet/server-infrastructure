@@ -1,0 +1,98 @@
+services:
+  tailscale-traefik:
+    image: node:22-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2
+    entrypoint: [node, /proxy.mjs]
+    command: !reset []
+    environment: !override {}
+    cap_add: !reset []
+    volumes: !override
+      - ./public-demo/test/tls-proxy.mjs:/proxy.mjs:ro
+      - ./public-demo/test/.runtime/tls:/tls:ro
+    networks: !override
+      default:
+        ipv4_address: 10.249.91.3
+  traefik:
+    profiles: [unused-staging]
+  traefik-https-check:
+    depends_on: !override
+      tailscale-traefik:
+        condition: service_started
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  pds:
+    environment:
+      NODE_EXTRA_CA_CERTS: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  bsky:
+    environment:
+      NODE_EXTRA_CA_CERTS: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  relay:
+    environment:
+      SSL_CERT_FILE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  jetstream:
+    environment:
+      SSL_CERT_FILE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  feedgen:
+    environment:
+      NODE_EXTRA_CA_CERTS: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  public-calendar:
+    environment:
+      NODE_EXTRA_CA_CERTS: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  public-gateway:
+    volumes: !override
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  social:
+    profiles: [unused-staging]
+  social-https-check:
+    profiles: [unused-staging]
+  pds-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  plc-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  bsky-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  relay-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  jetstream-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  feedgen-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+  ozone-https-check:
+    environment:
+      CURL_CA_BUNDLE: /tls/cert.pem
+    volumes:
+      - ./public-demo/test/.runtime/tls:/tls:ro
+networks:
+  default:
+    name: loftet-public-demo-check_private

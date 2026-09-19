@@ -1,0 +1,10 @@
+{
+  "id": "idrettens-id",
+  "label": "Idrettens ID",
+  "issuer": "https://auth.nif.test4.buypass.no/auth/realms/nif",
+  "clientId": "",
+  "clientSecret": "",
+  "clientAuth": "client_secret_basic",
+  "scopes": "openid",
+  "idTokenAlgorithm": "RS256"
+}

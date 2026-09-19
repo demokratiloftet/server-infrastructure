@@ -1,0 +1,3 @@
+FROM ghcr.io/bluesky-social/pds@sha256:05e164855fa1a3cf251c002210c46f8c86e7ae27bddc7a96045da25483840826
+COPY patch-pds.mjs pds-boundary.mjs /tmp/
+RUN node /tmp/patch-pds.mjs

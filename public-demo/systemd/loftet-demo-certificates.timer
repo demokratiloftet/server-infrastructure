@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh Loftet demo HTTPS certificates
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1h
+Persistent=true
+[Install]
+WantedBy=timers.target

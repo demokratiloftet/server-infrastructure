@@ -1,0 +1,26 @@
+// Creates its own disposable test accounts. Never modifies the two demo accounts.
+import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { createPds } from '../src/pds.mjs';
+import { createService } from '../src/service.mjs';
+import { readAuthority } from '../src/verifier.mjs';
+const pds=createPds('http://127.0.0.1:2583');
+const id=randomBytes(4).toString('hex'),password=randomBytes(20).toString('hex');
+const config={issuer:`issuer-${id}.test`,organiser:`organiser-${id}.test`,issuerPassword:password,organiserPassword:password,environment:'test'};
+for(const handle of [config.issuer,config.organiser])await pds.rpc('com.atproto.server.createAccount',{handle,email:`${handle}@example.invalid`,password},null,true);
+const service=createService(pds,config),ids=await service.identities();
+const input={name:'Integration event',description:'Synthetic test',location:'Test venue',clubId:'fjord',category:'Løping',startsAt:new Date(Date.now()+86400000).toISOString(),endsAt:new Date(Date.now()+90000000).toISOString()};
+await assert.rejects(()=>service.publish(input));
+await service.grant('fjord');
+await assert.rejects(()=>service.publish({...input,clubId:'marka'}));
+const result=await service.publish(input);
+assert(result.uri.startsWith(`at://${ids.subjectDid}/community.lexicon.calendar.event/`));
+assert.equal((await readAuthority(pds,{...ids,clubId:'fjord'})).valid,true);
+let state=await service.state();assert.equal(state.events[0].authority.valid,true);
+await service.revoke('fjord');
+await assert.rejects(()=>service.publish(input));
+state=await service.state();assert.equal(state.events.length,1);assert.equal(state.events[0].authority.valid,false);
+await service.grant('fjord');state=await service.state();assert.equal(state.events[0].authority.valid,false,'New grant must not validate old event reference');
+await service.publish(input);assert.equal((await service.state()).events.length,2);
+console.log('PASS real PDS: deny missing/wrong-club, grant, publish, independently verify, revoke, retain event, deny publication, regrant without rewriting history.');
+console.log('Disposable test accounts remain until the existing sandbox is restarted.');
