@@ -1,0 +1,6 @@
+FROM node:22-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2
+WORKDIR /demo
+COPY pds.mjs server.mjs ./
+COPY public ./public
+USER node
+CMD ["node", "server.mjs"]

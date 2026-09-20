@@ -1,0 +1,7 @@
+# Alpha image built 2026-09-15, upstream revision 158c439bdb7f3890e7cf8200ed3c291823fec336.
+# The upstream alpha currently publishes linux/amd64 only.
+FROM ghcr.io/bluesky-social/atproto@sha256:4b19b376aa6164b62ede70bb35db79096c6dac9985cecb175e82022860a3d796
+USER root
+COPY patch-pds.mjs /tmp/patch-pds.mjs
+RUN node /tmp/patch-pds.mjs
+USER node

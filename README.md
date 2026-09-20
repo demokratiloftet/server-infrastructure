@@ -9,3 +9,7 @@ for both apps while keeping federation inside the VPS. It defaults to loopback
 HTTPS. Production public access has not been enabled.
 
 See [the original audit](PUBLIC-DEMO-PLAN.md) for the problems this addresses.
+
+An optional [Spaces private-group demo](spaces-demo/README.md) adds a small
+members-only noticeboard at the calendar host's `/spaces/` path. It uses a separate
+alpha PDS and volume; the existing stack is unchanged until explicitly enabled.

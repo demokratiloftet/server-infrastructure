@@ -11,3 +11,4 @@ public-demo/calendar/node_modules/
 public-demo/test-results/
 public-demo/test/.runtime/
 __pycache__/
+spaces-demo/test/.runtime/
