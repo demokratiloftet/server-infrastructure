@@ -12,7 +12,7 @@ function request(path,{hostname=host,method='GET',token,data,cookie,raw}={}) {
 }
 const suffix=randomBytes(5).toString('hex');
 const account=await request('/xrpc/com.atproto.server.createAccount',{method:'POST',data:{handle:'smoke-'+suffix+'.'+host,email:'smoke-'+suffix+'@example.com',password:randomBytes(24).toString('hex')}});
-assert.equal(account.status,200,'Signup: '+JSON.stringify(account.data));
+assert.equal(account.status,200,'Signup failed');
 const token=account.data.accessJwt,did=account.data.did;
 const post=await request('/xrpc/com.atproto.repo.createRecord',{method:'POST',token,data:{repo:did,collection:'app.bsky.feed.post',record:{$type:'app.bsky.feed.post',text:'Synthetic private demo acceptance '+suffix,createdAt:new Date().toISOString()}}});
 assert.equal(post.status,200,'Post creation');
@@ -33,7 +33,10 @@ const media=await request(mediaPath,{hostname:social,cookie:mediaCookie});assert
 for(const method of ['com.atproto.sync.getRepo','com.atproto.sync.getBlob','com.atproto.sync.subscribeRepos','com.atproto.server.getServiceAuth','com.atproto.admin.getAccountInfo']) {
  assert.equal((await request('/xrpc/'+method,{token})).status,404,method);
 }
-assert.equal((await request('/xrpc/app.bsky.feed.getPosts?uris='+encodeURIComponent(post.data.uri))).status,200);
+const guestPosts=await request('/xrpc/app.bsky.feed.getPosts?uris='+encodeURIComponent(post.data.uri));assert.equal(guestPosts.status,200);assert.equal(guestPosts.data.posts[0].uri,post.data.uri);
+assert.equal((await request('/xrpc/com.atproto.repo.createRecord',{method:'POST',data:{}})).status,401);
+assert.equal((await request('/xrpc/app.bsky.actor.getPreferences')).status,401);
+assert.equal((await request('/xrpc/com.atproto.sync.subscribeRepos')).status,404);
 assert.equal((await request('/xrpc/com.atproto.repo.getRecord?repo='+did+'&collection=app.bsky.feed.post&rkey='+post.data.uri.split('/').at(-1))).status,401);
 assert.equal((await request('/media/avatar/plain/'+did+'/fake@jpeg',{hostname:social})).status,404);
 const state=await request('/api/state',{hostname:calendar});assert.equal(state.status,200);assert.equal(state.data.loggedOut,true);assert.deepEqual(state.data.events,[]);

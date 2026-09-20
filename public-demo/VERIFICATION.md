@@ -86,3 +86,25 @@ Public URLs:
 Anyone may register. Content requires login and remains in the local service
 stack; public federation/export is blocked. Registered users can still view and
 copy content, so this is not an invitation-only confidentiality boundary.
+
+## Anonymous social browsing update — 2026-09-20
+
+The social app now exposes an explicit allowlist of read-only AppView methods
+and local images without a session. Anonymous AppView reads use the fixed private
+AppView directly; authenticated requests retain PDS session validation. Repository
+reads, writes, preferences and notifications remain authenticated. Sync, exports,
+service-auth, admin endpoints and WebSocket replication remain denied. Calendar
+content continues to require its OAuth session. Onboarding now states that anyone
+can read and copy social content.
+
+Validation: all five boundary tests passed, including distinct AppView routing,
+wrong-method denial and anonymous write/private-account denial. Live public HTTPS
+smoke passed signup, authenticated post/profile/image writes, local indexing,
+anonymous post/image retrieval and authenticated export denial. Runtime topology
+and IPv4/IPv6/DNS isolation checks passed after the gateway was recreated. A fresh
+logged-out browser displayed the Discover feed and avatars using only our demo
+services. Initial browser navigation timed out during bundle loading; subsequent
+loading succeeded, and direct bundle downloads returned 200 in 1–3 seconds.
+
+This supersedes the original rollout's login requirement for social content.
+Anonymous visitors and bots may copy social content; federation remains disabled.

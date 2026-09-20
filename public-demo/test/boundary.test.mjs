@@ -25,9 +25,12 @@ test('gateway requires real PDS authorization, blocks replication even with a va
     if(req.url.startsWith('/xrpc/com.atproto.sync.getBlob?')){res.setHeader('content-type','image/png');return res.end('image-bytes');}
     return res.end(JSON.stringify({image:'https://bsky.demo.test/img/avatar/plain/test'}));
   });
+  const appviewCalls=[];
+  const appviewServer=http.createServer((req,res)=>{appviewCalls.push(req.url);assert.equal(req.headers.authorization,undefined);res.setHeader('content-type','application/json');res.end('{}');});
+  const publicAppview=await listen(appviewServer);
   const upstream=await listen(backend),dir=await mkdtemp(join(tmpdir(),'loftet-gateway-'));
   await writeFile(join(dir,'index.html'),'<h1>Local demo</h1>');
-  const gateway=http.createServer(createGateway({socialHost:'social.demo.test',calendarHost:'calendar.demo.test',pdsHost:'pds.demo.test',cookieDomain:'demo.test',pds:upstream,calendar:upstream,appview:upstream,appviewOrigin:'https://bsky.demo.test',appviewDid:'did:web:bsky.demo.test',staticDir:dir}).handler);
+  const gateway=http.createServer(createGateway({socialHost:'social.demo.test',calendarHost:'calendar.demo.test',pdsHost:'pds.demo.test',cookieDomain:'demo.test',pds:upstream,calendar:upstream,appview:publicAppview,appviewOrigin:'https://bsky.demo.test',appviewDid:'did:web:bsky.demo.test',staticDir:dir}).handler);
   const base=await listen(gateway);
   const request=(path,{host='pds.demo.test',method='GET',headers={},body}={})=>new Promise((yes,no)=>{
     const req=http.request(base+path,{method,headers:{host,...headers}},res=>{let b='';res.on('data',x=>b+=x);res.on('end',()=>yes({status:res.statusCode,headers:res.headers,body:b}));});req.on('error',no);req.end(body);
@@ -40,6 +43,7 @@ test('gateway requires real PDS authorization, blocks replication even with a va
       assert.equal((await request('/xrpc/'+method)).status,200,method);
       assert.equal((await request('/xrpc/'+method,{method:'POST',headers:origin,body:'{}'})).status,404,method+' wrong verb');
     }
+    assert.deepEqual(appviewCalls,Array.from(publicReads).filter(x=>x.startsWith('app.bsky.')).map(x=>'/xrpc/'+x));
     for(const method of ['com.atproto.repo.getRecord','com.atproto.repo.listRecords','app.bsky.actor.getPreferences','app.bsky.graph.getMutes','app.bsky.graph.getBlocks','app.bsky.notification.listNotifications'])
       assert.equal((await request('/xrpc/'+method)).status,401,method);
     for(const method of ['com.atproto.repo.createRecord','com.atproto.repo.putRecord','com.atproto.repo.deleteRecord','app.bsky.graph.muteActor'])
@@ -66,7 +70,7 @@ test('gateway requires real PDS authorization, blocks replication even with a va
     assert.equal((await request('/xrpc/com.atproto.server.createAccount',{method:'POST',headers:origin,body:JSON.stringify({handle:'x.pds.demo.test',email:'x@example.invalid',password:'long-enough-password'})})).status,200);
     for(const path of ['/api/grant','/api/revoke','/api/seed','/api/session'])assert.equal((await request(path,{host:'calendar.demo.test',method:'POST',headers:{...auth,...origin},body:'{}'})).status,404);
     const home=await request('/',{host:'social.demo.test'});assert.equal(home.status,200);assert.match(home.headers['content-security-policy'],/connect-src 'self' https:\/\/social.demo.test/);assert.doesNotMatch(home.headers['content-security-policy'],/https:\/\/bsky.social/);
-  }finally{await close(gateway);await close(backend);await rm(dir,{recursive:true});}
+  }finally{await close(gateway);await close(backend);await close(appviewServer);await rm(dir,{recursive:true});}
 });
 
 test('private SSRF exceptions cover only exact GET metadata and PLC documents',async()=>{
