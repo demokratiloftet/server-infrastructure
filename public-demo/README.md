@@ -12,7 +12,8 @@ A later plain `docker compose up` would restore the old network configuration.
 
 - Public: three exact HTTPS hosts (`demo-social`, `demo-calendar`, `pds`) under
   `${PARTITION}.${DOMAIN}`. Landing pages, signup and login are available to anyone.
-- Reads of posts, profiles and images require a real PDS session. Calendar data
+- Selected social feeds, posts, profiles and images are readable without login.
+  Posting, interactions, preferences and notifications require a real PDS session. Calendar data
   requires its OAuth browser session. Anonymous calendar state contains no records.
 - PDS sync/export/firehose, admin, account imports, external service-auth and
   arbitrary XRPC methods are denied, including for signed-in accounts. WebSocket
@@ -34,7 +35,8 @@ A later plain `docker compose up` would restore the old network configuration.
   issues/revokes grants only for the current user and predefined synthetic clubs.
   It does not verify real club membership. Shared admin routes are unavailable.
 
-Anyone can register and then read the demo, and participants can copy content.
+Anyone can read and copy social posts and images without registering, including
+bots and search engines. Anyone can register to participate.
 This is **private infrastructure and no automatic public federation**, not
 confidentiality from everyone on the internet. Content is delivered to participants'
 browsers. Accounts belong to this private PLC and are not public Bluesky accounts.
@@ -136,7 +138,7 @@ configuration: it contains credentials.
    `private-bootstrap` or `private-legacy` on this deployment.
 4. Check both apps via an SSH tunnel and dedicated browser host mapping, as above
    (map to forwarded port 8443). Test a synthetic signup, OAuth consent, activity
-   publishing, social post/image, logout, and anonymous denial. Confirm legacy
+   publishing, social post/image, logout, anonymous social browsing and private API denial. Confirm legacy
    calendar/social containers are stopped and have no alternate public routes.
 5. Install certificate refresh after verifying the expected checkout path:
 
@@ -180,7 +182,7 @@ files and auth keys with their corresponding volumes.
 
 ## Verification and maintenance
 
-`npm test` under `public-demo` checks gateway policy, token validation, media gating,
+`npm test` under `public-demo` checks gateway policy, token validation, public social reads and private writes,
 SSRF exceptions and private DNS. The calendar's `npm test` verifies auth/grants;
 `npm run test:integration` uses the existing disposable local sandbox at port 2583;
 `npm run verify` checks this branch's isolated staging network. The actual public

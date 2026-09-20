@@ -25,19 +25,19 @@ for(let i=0;i<30;i++){
  await new Promise(r=>setTimeout(r,1000));
 }
 assert(indexed,'Private AppView did not index post: '+JSON.stringify(last));
-const view=await request('/xrpc/app.bsky.actor.getProfile?actor='+did,{token});assert.equal(view.status,200);assert.equal(view.data.handle,account.data.handle,'Local handle proof');assert(view.data.avatar?.startsWith('https://'+social+'/media/'),'Avatar must use authenticated media gateway');
+const view=await request('/xrpc/app.bsky.actor.getProfile?actor='+did,{token});assert.equal(view.status,200);assert.equal(view.data.handle,account.data.handle,'Local handle proof');assert(view.data.avatar?.startsWith('https://'+social+'/media/'),'Avatar must use local media gateway');
 const mediaPath=new URL(view.data.avatar).pathname;
-assert.equal((await request(mediaPath,{hostname:social})).status,401);
+assert.equal((await request(mediaPath,{hostname:social})).status,200);
 const mediaCookie=account.headers['set-cookie'][0].split(';')[0];
 const media=await request(mediaPath,{hostname:social,cookie:mediaCookie});assert.equal(media.status,200,'Authenticated image retrieval '+mediaPath+' '+JSON.stringify(media.data));
 for(const method of ['com.atproto.sync.getRepo','com.atproto.sync.getBlob','com.atproto.sync.subscribeRepos','com.atproto.server.getServiceAuth','com.atproto.admin.getAccountInfo']) {
  assert.equal((await request('/xrpc/'+method,{token})).status,404,method);
 }
-assert.equal((await request('/xrpc/app.bsky.feed.getPosts?uris='+encodeURIComponent(post.data.uri))).status,401);
+assert.equal((await request('/xrpc/app.bsky.feed.getPosts?uris='+encodeURIComponent(post.data.uri))).status,200);
 assert.equal((await request('/xrpc/com.atproto.repo.getRecord?repo='+did+'&collection=app.bsky.feed.post&rkey='+post.data.uri.split('/').at(-1))).status,401);
-assert.equal((await request('/media/avatar/plain/'+did+'/fake@jpeg',{hostname:social})).status,401);
+assert.equal((await request('/media/avatar/plain/'+did+'/fake@jpeg',{hostname:social})).status,404);
 const state=await request('/api/state',{hostname:calendar});assert.equal(state.status,200);assert.equal(state.data.loggedOut,true);assert.deepEqual(state.data.events,[]);
 const start=await request('/auth/atproto/start',{hostname:calendar,method:'POST',data:{}});
 // Calendar requires its own Origin.
 assert.equal(start.status,403);
-console.log('PASS real signup, private post/profile/image, local relay/AppView indexing, authenticated replication denial, anonymous record/media/calendar denial.');
+console.log('PASS real signup, private post/profile/image, local relay/AppView indexing, authenticated replication denial, anonymous social reads, private repository/calendar denial.');

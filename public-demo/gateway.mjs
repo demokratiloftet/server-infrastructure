@@ -92,13 +92,17 @@ export function createGateway(c) {
         // Client-selected service destinations never pass through this gateway.
         if(req.headers['atproto-proxy']&&req.headers['atproto-proxy']!==c.appviewDid+'#bsky_appview')throw error(403,'External service unavailable');
         headers['atproto-accept-labelers']=c.labelerDid||'';
-        if(policy==='authenticated')await bearer(req);
+        if(policy==='authenticated'||(policy==='public-read'&&req.headers.authorization))await bearer(req);
         let data=req.method==='POST'?await body(req):undefined;
         if(method==='com.atproto.server.createAccount'){
           rate(req,true);try{data=Buffer.from(JSON.stringify(signupBody(JSON.parse(data),c.pdsHost)));}catch{throw error(400,'Choose a local handle, valid email and a password of at least 12 characters');}
         }
         if(method==='com.atproto.repo.uploadBlob'&&!['image/png','image/jpeg','image/webp'].includes(headers['content-type']))throw error(415,'Only images are supported');
-        const result=await upstream(c.pds,req.url,req.method,headers,data);
+        // Anonymous AppView reads bypass the PDS's authenticated service proxy.
+        // Destination remains fixed on our internal network, never client-selected.
+        const publicAppview=policy==='public-read'&&!req.headers.authorization&&method.startsWith('app.bsky.');
+        if(publicAppview)headers.host=new URL(c.appviewOrigin).host;
+        const result=await upstream(publicAppview?c.appview:c.pds,req.url,req.method,headers,data);
         if(['com.atproto.server.createAccount','com.atproto.server.createSession','com.atproto.server.refreshSession'].includes(method))storeSession(res,result);
         if(method==='com.atproto.server.deleteSession'){
           const token=cookieToken(req)?.token;for(const[k,v]of sessions)if(v.token===token)sessions.delete(k);
@@ -130,7 +134,6 @@ export function createGateway(c) {
         return send(res,await upstream(c.calendar,req.url,req.method,headers,req.method==='POST'?await body(req,32768):undefined));
       }
       if(p.startsWith('/media/')&&req.method==='GET'){
-        await bearer(req,true);
         const match=/^\/media\/[a-z_]+\/plain\/(did:plc:[a-z2-7]{24})\/(b[a-z2-7]+)(?:@(?:jpeg|png|webp))?$/.exec(p);
         if(!match||url.search)throw error(404,'Image not found');
         // Fetch the original image only from our PDS. No external CDN or URL resolution.

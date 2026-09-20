@@ -5,6 +5,21 @@ export const anonymous = new Map([
   ['com.atproto.server.createSession','POST'],
   ['com.atproto.server.refreshSession','POST'],
 ]);
+// Public presentation reads only; repository and synchronization APIs stay private.
+export const publicReads = new Set([
+  'com.atproto.identity.resolveHandle',
+  'app.bsky.actor.getProfile','app.bsky.actor.getProfiles',
+  'app.bsky.actor.getSuggestions','app.bsky.actor.searchActors','app.bsky.actor.searchActorsTypeahead',
+  'app.bsky.feed.getAuthorFeed','app.bsky.feed.getPosts','app.bsky.feed.getPostThread',
+  'app.bsky.feed.getLikes','app.bsky.feed.getRepostedBy','app.bsky.feed.getFeed',
+  'app.bsky.feed.getFeedGenerator','app.bsky.feed.getFeedGenerators',
+  'app.bsky.feed.getSuggestedFeeds','app.bsky.feed.searchPosts',
+  'app.bsky.graph.getFollowers','app.bsky.graph.getFollows',
+  'app.bsky.graph.getLists','app.bsky.graph.getList','app.bsky.graph.getSuggestedFollowsByActor',
+  'app.bsky.labeler.getServices','app.bsky.unspecced.getConfig',
+  'app.bsky.unspecced.getPopularFeedGenerators','app.bsky.unspecced.getSuggestedFeeds',
+  'app.bsky.unspecced.getSuggestedUsers',
+]);
 export const authenticated = new Map([
   ...['com.atproto.server.getSession','com.atproto.repo.getRecord','com.atproto.repo.listRecords',
     'com.atproto.repo.describeRepo','com.atproto.identity.resolveHandle',
@@ -35,6 +50,7 @@ export function safePath(raw) {
   return !p.includes('%')&&!p.includes('//')&&!p.split('/').some(x=>x==='.'||x==='..');
 }
 export function rpcPolicy(method,verb) {
+  if(verb==='GET'&&publicReads.has(method))return 'public-read';
   if(anonymous.get(method)===verb)return 'anonymous';
   if(authenticated.get(method)===verb)return 'authenticated';
   return 'deny';

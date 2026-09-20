@@ -44,16 +44,16 @@ edit('src/state/messages/events/index.tsx','  if (!currentAccount) {','  if (pro
 edit('src/screens/Onboarding/index.tsx',"  const showValueProp = ENV !== 'e2e' && gate('onboarding_value_prop')",'  const showValueProp = false');
 edit('src/screens/Onboarding/StepFinished.tsx','We hope you have a wonderful time. Remember, Bluesky is:','Welcome to the Loftet demo:');
 edit('src/screens/Onboarding/StepFinished.tsx','<Trans>Public</Trans>','<Trans>Shared demo</Trans>');
-edit('src/screens/Onboarding/StepFinished.tsx','Your posts, likes, and blocks are public. Mutes are private.','Signed-in demo participants can see your posts and copy what they read.');
+edit('src/screens/Onboarding/StepFinished.tsx','Your posts, likes, and blocks are public. Mutes are private.','Anyone can read and copy demo posts and images without signing in.');
 edit('src/screens/Onboarding/StepFinished.tsx','<Trans>Open</Trans>','<Trans>Local accounts</Trans>');
-edit('src/screens/Onboarding/StepFinished.tsx','Never lose access to your followers or data.','Your account and posts stay on our infrastructure, without public federation.');
+edit('src/screens/Onboarding/StepFinished.tsx','Never lose access to your followers or data.','Posts are hosted here with public federation disabled.');
 edit('src/screens/Onboarding/StepFinished.tsx','Choose the algorithms that power your custom feeds.','Try posts, images and the calendar with synthetic demo data.');
 
 for(const action of ['logoutCurrentAccount','logoutEveryAccount']) {
   edit('src/state/session/index.tsx', "SessionApiContext['"+action+"']\n  >(\n    logContext => {", "SessionApiContext['"+action+"']\n  >(\n    async logContext => {\n      const result = await fetch('https://' + process.env.EXPO_PUBLIC_LOCAL_PDS + '/demo/logout', {method:'POST'})\n      if (!result.ok) throw new Error('Could not end demo media session; please retry')");
 }
 // These deployment-specific notices are plain text, not missing upstream i18n IDs.
-for(const notice of ['Welcome to the Loftet demo:','Shared demo','Signed-in demo participants can see your posts and copy what they read.','Local accounts','Your account and posts stay on our infrastructure, without public federation.','Try posts, images and the calendar with synthetic demo data.']) {
+for(const notice of ['Welcome to the Loftet demo:','Shared demo','Anyone can read and copy demo posts and images without signing in.','Local accounts','Posts are hosted here with public federation disabled.','Try posts, images and the calendar with synthetic demo data.']) {
   const file='src/screens/Onboarding/StepFinished.tsx';
   const text=readFileSync(root+'/'+file,'utf8');
   const escaped=notice.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');

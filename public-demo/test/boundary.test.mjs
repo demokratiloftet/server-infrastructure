@@ -4,13 +4,14 @@ import http from 'node:http';
 import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {publicReads} from '../policy.mjs';
 import {createGateway} from '../gateway.mjs';
 import {privateFetch,privateProxy} from '../pds-boundary.mjs';
 import {answer,resolveAnswer} from '../dns.mjs';
 const listen=s=>new Promise(r=>s.listen(0,'127.0.0.1',()=>r('http://127.0.0.1:'+s.address().port)));
 const close=s=>new Promise(r=>s.close(r));
 
-test('gateway requires real PDS authorization, blocks replication even with a valid token, and gates media',async()=>{
+test('gateway requires real PDS authorization, blocks replication even with a valid token, and permits only selected public reads',async()=>{
   const calls=[];let revoked=false,lastHeaders;
   const backend=http.createServer(async(req,res)=>{
     calls.push(req.url);lastHeaders=req.headers;let body='';for await(const c of req)body+=c;
@@ -35,6 +36,15 @@ test('gateway requires real PDS authorization, blocks replication even with a va
     const auth={authorization:'Bearer issued-token'},origin={origin:'https://social.demo.test','content-type':'application/json'};
     assert.equal((await request('/xrpc/app.bsky.feed.getTimeline')).status,401);
     assert.equal((await request('/xrpc/app.bsky.feed.getTimeline',{headers:{authorization:'Bearer fabricated'}})).status,401);
+    for(const method of publicReads){
+      assert.equal((await request('/xrpc/'+method)).status,200,method);
+      assert.equal((await request('/xrpc/'+method,{method:'POST',headers:origin,body:'{}'})).status,404,method+' wrong verb');
+    }
+    for(const method of ['com.atproto.repo.getRecord','com.atproto.repo.listRecords','app.bsky.actor.getPreferences','app.bsky.graph.getMutes','app.bsky.graph.getBlocks','app.bsky.notification.listNotifications'])
+      assert.equal((await request('/xrpc/'+method)).status,401,method);
+    for(const method of ['com.atproto.repo.createRecord','com.atproto.repo.putRecord','com.atproto.repo.deleteRecord','app.bsky.graph.muteActor'])
+      assert.equal((await request('/xrpc/'+method,{method:'POST',headers:origin,body:'{}'})).status,401,method);
+    assert.equal((await request('/xrpc/app.bsky.feed.getPosts',{headers:{authorization:'Bearer fabricated'}})).status,401);
     const timeline=await request('/xrpc/app.bsky.feed.getTimeline',{headers:auth});assert.equal(timeline.status,200);assert.match(timeline.body,/https:\/\/social.demo.test\/media\/avatar/);
     for(const method of ['com.atproto.sync.getRepo','com.atproto.sync.getBlob','com.atproto.sync.subscribeRepos','com.atproto.repo.importRepo','com.atproto.server.getServiceAuth','com.atproto.admin.getAccountInfo','chat.bsky.convo.sendMessage']){
       const n=calls.length;assert.equal((await request('/xrpc/'+method,{headers:auth})).status,404);assert.equal(calls.length,n);
@@ -43,13 +53,13 @@ test('gateway requires real PDS authorization, blocks replication even with a va
     assert.equal((await request('/xrpc/app.bsky.feed.getTimeline',{host:'relay.demo.test',headers:auth})).status,404);
     assert.equal((await request('/xrpc/app.bsky.feed.getTimeline',{headers:{...auth,'atproto-proxy':'did:web:api.bsky.app#bsky_appview'}})).status,403);
     assert.equal((await request('/xrpc/com.atproto.repo.createRecord',{method:'POST',headers:{...auth,...origin,origin:'https://evil.test'},body:'{}'})).status,403);
-    assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test'})).status,401);
+    assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test'})).status,200);
     const login=await request('/xrpc/com.atproto.server.createSession',{method:'POST',headers:origin,body:'{}'});assert.equal(login.status,200);
     const cookie=login.headers['set-cookie'][0].split(';')[0];assert.match(login.headers['set-cookie'][0],/HttpOnly; Secure; SameSite=Strict/);
     assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test',headers:{cookie}})).status,200);
-    revoked=true;assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test',headers:{cookie}})).status,401);revoked=false;
+    revoked=true;assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test',headers:{cookie}})).status,200);revoked=false;
     assert.equal((await request('/demo/logout',{method:'POST',headers:{...origin,cookie}})).status,204);
-    assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test',headers:{cookie}})).status,401);
+    assert.equal((await request('/media/avatar/plain/did:plc:abcdefghijklmnopqrstuvwx/bafkreitest@jpeg',{host:'social.demo.test',headers:{cookie}})).status,200);
     const consent=await request('/@atproto/oauth-provider/~api/consent',{method:'POST',headers:{...origin,authorization:'Bearer ephemeral-proof','x-csrf-token':'csrf','sec-fetch-site':'same-origin',referer:'https://pds.demo.test/oauth/authorize'},body:'{}'});
     assert.equal(consent.status,200);assert.equal(lastHeaders.authorization,'Bearer ephemeral-proof');assert.equal(lastHeaders['x-csrf-token'],'csrf');assert.equal(lastHeaders['sec-fetch-site'],'same-origin');assert.equal(consent.headers['referrer-policy'],'same-origin');
     for(const input of [{handle:'x.bsky.social',email:'x@example.invalid',password:'long-enough-password'},{handle:'x.pds.demo.test',email:'x@example.invalid',password:'long-enough-password',did:'did:plc:attacker'}])assert.equal((await request('/xrpc/com.atproto.server.createAccount',{method:'POST',headers:origin,body:JSON.stringify(input)})).status,400);
