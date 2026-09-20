@@ -95,8 +95,8 @@ sh public-demo/compose.sh build pds public-calendar public-gateway
 ```
 
 Configuration preparation imports existing issuer credentials. Certificate export
-is a separate step into a restricted, ignored directory. The audited VPS currently
-has individual certificates, so the new wildcard must first be issued by Traefik. It neither starts services nor
+is a separate step into a restricted, ignored directory. On an initial deployment, the new wildcard must first be issued by Traefik.
+The live rollout issued it on 2026-09-20; see VERIFICATION.md. It neither starts services nor
 changes DNS. Keep `.env`, `public-demo/.env`, both calendar auth stores and all
 private keys backed up with the database volumes. Never print resolved Compose
 configuration: it contains credentials.
@@ -112,6 +112,13 @@ configuration: it contains credentials.
    volumes (Postgres, PDS, PLC if separate, relay, feed generator, Tailscale state,
    and calendar auth volumes), plus the files above. Verify backup readability.
    Record volume names via `docker volume ls`; do not assume only the PDS matters.
+   For this POC the owner explicitly deferred a full volume backup; see the live
+   rollout record. Configuration snapshots do not replace a data backup.
+
+   If Docker reports an old container is not connected to its former network,
+   verify all containers for the exact infrastructure project are stopped, then
+   remove only those stopped container definitions with `docker rm` (no `-v`).
+   Preserve all named volumes and unrelated projects before retrying.
 3. Bring up the branch using the public overlay, still bound to loopback:
 
    ```sh

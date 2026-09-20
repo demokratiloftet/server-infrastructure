@@ -34,7 +34,7 @@ Passed:
 - Real VPS configuration rendered and passed preflight using existing settings,
   without printing or committing credentials.
 
-Still part of the actual rollout, not claimed as completed:
+Outstanding at the end of staging (resolved by the rollout record below):
 
 - Consistent production backup and maintenance-window migration.
 - Issuing the newly configured wildcard certificate with Traefik DNS-01. The
@@ -44,3 +44,45 @@ Still part of the actual rollout, not claimed as completed:
 
 See [deployment guide](README.md) for reproduction, feature limits and rollback.
 Synthetic test data is separate from production and can be retained for reruns.
+
+## Live VPS rollout — 2026-09-20
+
+Deployed implementation commit `372d0a6` on branch
+`feat/public-demo-private-federation` in `/root/server-infrastructure`.
+
+- Preserved existing named volumes, old calendar auth store and Tailscale state.
+  Full volume backup was explicitly deferred by the owner for this POC.
+  Restricted configuration snapshots and original targeted DNS records are in
+  `/root/public-demo-rollout-2026-09-20`; previous local changes are in Git stash.
+- Stopped legacy infrastructure/calendar containers. Removed only stopped
+  infrastructure container definitions (without `-v`) to resolve Docker's old
+  shared-network-namespace references during migration. Data volumes remain.
+- Built the real configured images on the VPS. All enabled healthchecks pass.
+- Issued a trusted `*.dev.demokratiloftet.no` certificate using existing Vercel
+  DNS-01 configuration. Enabled the certificate export systemd timer.
+- Published only the gateway at IPv4 TCP 443. Added exact `demo-social.dev` and
+  `demo-calendar.dev` A records and updated exact `pds.dev` to `187.124.129.149`.
+  Other private service and wildcard records were retained. No IPv6 HTTPS listener.
+- Verified both apps via the public IP and then ordinary public DNS with normal
+  TLS validation, without browser host overrides or certificate exceptions.
+- Live synthetic signup, post/profile/image upload, own relay/AppView indexing,
+  local handle resolution and authenticated image retrieval passed. Anonymous
+  records/media/calendar contents and authenticated exports/service-auth/admin
+  routes were denied. Public PDS firehose returns 404. Backend hostnames and
+  an unknown Host sent to the public gateway return 404.
+- Browser checks passed: calendar OAuth sign-in/consent, self-service demo grant,
+  activity publication; social sign-in, existing content/avatar display and new
+  post publication/display on the account profile. Synthetic test content is
+  clearly labelled; existing content was retained.
+- Runtime network/egress verification passed before public exposure and again
+  after gateway recreation on port 443, including private PDS, PLC, AppView,
+  calendar, gateway, relay and Jetstream namespaces.
+
+Public URLs:
+
+- https://demo-calendar.dev.demokratiloftet.no
+- https://demo-social.dev.demokratiloftet.no
+
+Anyone may register. Content requires login and remains in the local service
+stack; public federation/export is blocked. Registered users can still view and
+copy content, so this is not an invitation-only confidentiality boundary.
