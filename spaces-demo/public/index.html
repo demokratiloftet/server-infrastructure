@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Loftet · Private groups</title><link rel="stylesheet" href="/spaces/style.css"><script src="/spaces/app.js" defer></script></head>
+<body><main>
+  <header><a href="/">← Calendar</a><span class="badge">Experimental demo</span><h1>A place for your group.</h1><p>Share notices with the people you invite. Stored on Loftet’s private Spaces PDS.</p></header>
+  <p class="warning">Use fictional demo content only. This alpha is not end-to-end encrypted. Demo accounts are separate from calendar accounts; email and password recovery are unavailable.</p>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section id="login"><h2>Start here</h2><form id="login-form"><label>Demo username<input name="username" required maxlength="32" autocomplete="username" pattern="[a-z0-9-]+"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="256" autocomplete="current-password"></label><div class="actions"><button name="action" value="login">Sign in</button><button name="action" value="signup" class="secondary">Create demo account</button></div></form></section>
+  <section id="account" hidden><div class="actions"><strong id="identity"></strong><button id="logout" class="secondary">Sign out</button></div>
+    <form id="create-form"><h2>Create a noticeboard</h2><label>Group name<input name="name" placeholder="fjord-swimming" required maxlength="48" pattern="[a-z0-9][a-z0-9-]*"></label><button>Create private group</button></form>
+    <form id="open-form"><h2>Open a group</h2><label>Group link<input name="link" required placeholder="Paste the link shared with you"></label><button class="secondary">Open group</button></form>
+  </section>
+  <section id="group" hidden><p class="eyebrow">Members-only noticeboard</p><h2 id="group-name"></h2><label>Share this link with invited members<input id="share-link" readonly></label><p>Keep this link to return. A link alone does not grant access.</p>
+    <div id="owner" hidden><form id="member-form"><h3>Manage access</h3><label>Existing demo username<input name="username" required maxlength="32"></label><div class="actions"><button name="action" value="add">Add reader</button><button name="action" value="remove" class="secondary">Remove reader</button></div></form><p id="members"></p>
+    <form id="notice-form"><label>New notice<textarea name="text" required maxlength="2000" rows="4" placeholder="What should the group know?"></textarea></label><button>Publish to group</button></form></div>
+    <div class="actions"><h3>Notices</h3><button id="refresh" class="secondary">Refresh</button></div><div id="notices"></div><p id="more" hidden>Showing the latest 50 notices.</p>
+  </section>
+  <footer>Group owners publish; invited members read. Removing a member blocks their next refresh. It cannot erase content already viewed or copied.</footer>
+</main></body></html>

@@ -1,0 +1,8 @@
+*
+!Dockerfile
+!Dockerfile.pds
+!patch-pds.mjs
+!pds.mjs
+!server.mjs
+!public/
+!public/**

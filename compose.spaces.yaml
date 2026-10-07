@@ -1,0 +1,72 @@
+# Apply AFTER compose.public.yaml. Never replace or mount the existing pds_data.
+services:
+  spaces-pds:
+    platform: linux/amd64
+    build:
+      context: ./spaces-demo
+      dockerfile: Dockerfile.pds
+    image: loftet-spaces-pds:alpha-20260915
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=32m"]
+    networks:
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.21
+    dns: ["${DEMO_NET_PREFIX:-10.249.90}.2"]
+    volumes:
+      - spaces-pds-data:/app/data
+    environment:
+      PDS_HOSTNAME: spaces-pds.${PARTITION}.${DOMAIN}
+      PDS_PORT: '3000'
+      PDS_DATA_DIRECTORY: /app/data
+      PDS_BLOBSTORE_DISK_LOCATION: /app/data/blobs
+      PDS_DID_PLC_URL: http://plc:3000
+      PDS_ADMIN_PASSWORD: ${SPACES_ADMIN_PASSWORD:?Run spaces-demo/configure.py}
+      PDS_JWT_SECRET: ${SPACES_JWT_SECRET:?Run spaces-demo/configure.py}
+      PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX: ${SPACES_PLC_ROTATION_KEY:?Run spaces-demo/configure.py}
+      PDS_DEV_MODE: 'false'
+      PDS_DISABLE_SSRF_PROTECTION: 'false'
+      PDS_RATE_LIMITS_ENABLED: 'true'
+      PDS_INVITE_REQUIRED: 'false'
+      PDS_ACCEPTING_REPO_IMPORTS: 'false'
+      PDS_CRAWLERS: ''
+      LOG_LEVEL: warn
+    depends_on:
+      plc:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/xrpc/_health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  spaces-app:
+    build:
+      context: ./spaces-demo
+    image: loftet-spaces-app:demo
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      default:
+        ipv4_address: ${DEMO_NET_PREFIX:-10.249.90}.22
+    dns: ["${DEMO_NET_PREFIX:-10.249.90}.2"]
+    environment:
+      SPACES_APP_ORIGIN: https://demo-calendar.${PARTITION}.${DOMAIN}
+      SPACES_PDS_HOST: spaces-pds.${PARTITION}.${DOMAIN}
+    depends_on:
+      spaces-pds:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "require('node:http').get('http://127.0.0.1:3000/health',{headers:{host:new URL(process.env.SPACES_APP_ORIGIN).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  public-gateway:
+    environment:
+      SPACES_DEMO_ENABLED: 'true'
+volumes:
+  spaces-pds-data: {}

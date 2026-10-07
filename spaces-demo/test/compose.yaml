@@ -1,0 +1,76 @@
+name: loftet-spaces-check
+services:
+  postgres:
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    environment:
+      POSTGRES_DB: plc
+      POSTGRES_PASSWORD: ${SPACES_ADMIN_PASSWORD}
+    volumes: [plc-db:/var/lib/postgresql/data]
+    networks: [default]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d plc]
+      interval: 3s
+      retries: 20
+  plc:
+    image: ghcr.io/eurosky-social/did-method-plc:latest@sha256:69c74075e7da7b2f788783004d87f460cf5fe4dbd3c5bc207be34b751e1b3c25
+    environment:
+      DB_CREDS_JSON: '{"username":"postgres","password":"${SPACES_ADMIN_PASSWORD}","host":"postgres","port":"5432","database":"plc"}'
+      DB_MIGRATE_CREDS_JSON: '{"username":"postgres","password":"${SPACES_ADMIN_PASSWORD}","host":"postgres","port":"5432","database":"plc"}'
+      ENABLE_MIGRATIONS: 'true'
+      PORT: '3000'
+      LOG_LEVEL: warn
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/_health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  private-dns:
+    image: node:22-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2
+    command: [node, /dns.mjs]
+    volumes: [../../public-demo/dns.mjs:/dns.mjs:ro]
+    environment: {DEMO_DNS_RECORDS: '{}'}
+    networks:
+      default: {ipv4_address: 10.249.93.2}
+  spaces-pds:
+    extends: {file: ../../compose.spaces.yaml, service: spaces-pds}
+  spaces-app:
+    extends: {file: ../../compose.spaces.yaml, service: spaces-app}
+  public-gateway:
+    # Reuse the existing gateway image, overriding only its reviewed source.
+    # Build it with public-demo/compose.sh if it is not already available.
+    image: loftet-public-gateway:private-demo
+    pull_policy: never
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - ../../public-demo/gateway.mjs:/demo/gateway.mjs:ro
+      - ../../public-demo/policy.mjs:/demo/policy.mjs:ro
+      - ./.runtime/tls:/tls:ro
+    ports: [127.0.0.1:19443:8443]
+    dns: [10.249.93.2]
+    networks:
+      default: {ipv4_address: 10.249.93.20}
+      ingress: {}
+    environment:
+      DEMO_BASE_DOMAIN: dev.demokratiloftet.no
+      DEMO_SOCIAL_HOST: demo-social.dev.demokratiloftet.no
+      DEMO_CALENDAR_HOST: demo-calendar.dev.demokratiloftet.no
+      PDS_HOST: pds.dev.demokratiloftet.no
+      DEMO_PRIVATE_SUBNET: 10.249.93.0/24
+      DEMO_DNS_IP: 10.249.93.2
+      TLS_DIRECTORY: /tls
+      SPACES_DEMO_ENABLED: 'true'
+networks:
+  default:
+    internal: true
+    enable_ipv6: false
+    ipam:
+      config: [{subnet: 10.249.93.0/24}]
+  ingress: {}
+volumes:
+  spaces-pds-data: {}
+  plc-db: {}

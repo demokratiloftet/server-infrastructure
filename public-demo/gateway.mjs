@@ -80,6 +80,15 @@ export function createGateway(c) {
       if(!['GET','POST'].includes(req.method))throw error(405,'Method not allowed');
       if(req.method==='POST'&&!origins.has(req.headers.origin))throw error(403,'Origin required');
       const isPds=req.headers.host===c.pdsHost,isCalendar=req.headers.host===c.calendarHost;
+      if(isCalendar&&c.spaces&&p.startsWith('/spaces/')){
+        const reads=new Set(['/spaces/','/spaces/app.js','/spaces/style.css','/spaces/api/me','/spaces/api/group']);
+        const writes=new Set(['/spaces/api/signup','/spaces/api/login','/spaces/api/logout','/spaces/api/groups','/spaces/api/notices','/spaces/api/members']);
+        if(!(req.method==='GET'?reads:writes).has(p))throw error(404,'Not found');
+        if(p==='/spaces/api/signup'||p==='/spaces/api/login')rate(req,true);
+        const headers={host:c.calendarHost};
+        for(const k of ['content-type','cookie','origin'])if(req.headers[k])headers[k]=req.headers[k];
+        return send(res,await upstream(c.spaces,req.url,req.method,headers,req.method==='POST'?await body(req,8192):undefined));
+      }
       if(isPds&&p==='/demo/logout'&&req.method==='POST'){
         const session=cookieToken(req);for(const[k,v]of sessions)if(v===session)sessions.delete(k);
         res.setHeader('set-cookie',cookie(''));res.statusCode=204;return res.end();
@@ -155,6 +164,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const c={socialHost:e.DEMO_SOCIAL_HOST,calendarHost:e.DEMO_CALENDAR_HOST,pdsHost:e.PDS_HOST,cookieDomain:e.DEMO_BASE_DOMAIN,
     pds:'http://pds:3000',calendar:'http://public-calendar:3000',appview:'http://bsky:2584',
     appviewOrigin:'https://bsky.'+e.DEMO_BASE_DOMAIN,appviewDid:'did:web:bsky.'+e.DEMO_BASE_DOMAIN,labelerDid:e.LABELER_DID,staticDir:'/social/web-build'};
+  if(e.SPACES_DEMO_ENABLED==='true')c.spaces='http://spaces-app:3000';
   for(const h of [c.socialHost,c.calendarHost,c.pdsHost])if(!h.endsWith('.'+c.cookieDomain)||!/^[-a-z0-9.]+$/.test(h))throw new Error('Invalid demo hostname');
   const tls=async()=>({key:await readFile(e.TLS_DIRECTORY+'/key.pem'),cert:await readFile(e.TLS_DIRECTORY+'/cert.pem')});
   const server=https.createServer(await tls(),createGateway(c).handler);server.requestTimeout=20000;server.headersTimeout=10000;
