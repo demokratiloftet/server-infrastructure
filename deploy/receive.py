@@ -26,6 +26,19 @@ def requested_sha(command):
     return match[1]
 
 
+def read_token(stream):
+    # GitHub's token format is opaque. Validate transport bounds, not a guessed prefix.
+    token = stream.readline(8194).rstrip('\n')
+    if not re.fullmatch(r'[!-~]{1,8192}', token):
+        raise ValueError('A short-lived GitHub Actions read token is required')
+    return token
+
+
+def requires_operator_review(paths):
+    protected = ('deploy/', 'infra/', 'compose', 'server/db.mjs', 'src/store.ts', 'fixture/', 'vendor/')
+    return any(p.startswith(protected) and not p.endswith('.md') for p in paths)
+
+
 def run(*args, **kwargs):
     return subprocess.run(args, check=True, **kwargs)
 
@@ -48,9 +61,7 @@ def main():
         git = ('git', '-C', str(source))
         # The organisation disables deploy keys. Use only this workflow's
         # short-lived, repository-scoped contents:read token, received over SSH.
-        token = sys.stdin.readline(4097).strip()
-        if not token or len(token) > 4096 or not re.fullmatch(r'[A-Za-z0-9_]+', token):
-            raise ValueError('A short-lived GitHub Actions read token is required')
+        token = read_token(sys.stdin)
         fetch_env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0',
                      'GIT_CONFIG_COUNT': '2',
                      'GIT_CONFIG_KEY_0': 'http.https://github.com/.extraheader',
@@ -71,8 +82,7 @@ def main():
         previous = json.loads(previous_file.read_text())
         # Runtime topology, gateways and DB schemas need a reviewed operator rollout.
         changed = capture(*git, 'diff', '--name-only', previous['sha'], sha).splitlines()
-        protected = ('deploy/', 'infra/', 'compose', 'server/db.mjs', 'src/store.ts')
-        if any(p.startswith(protected) and not p.endswith('.md') for p in changed):
+        if requires_operator_review(changed):
             raise ValueError('Topology, deployment or schema changed: operator review and rollout required')
         release = root / 'releases' / sha
         release.mkdir(parents=True, exist_ok=True)

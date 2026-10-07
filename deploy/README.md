@@ -10,7 +10,7 @@ to deploy exactly that commit. No PR job receives a deployment credential.
 | --- | --- | --- |
 | `loftet-social` | `main` | `server-infrastructure` / `loftet-social` |
 | `calendar-app` | `master` | `server-infrastructure` / `public-calendar` |
-| `organisation-verifier` | `main` | `organisation-verifier` / `app`, if configured |
+| `organisation-verifier` | `main` | `organisation-verifier` / `app` (loopback operator UI) |
 
 The original infrastructure branch, PDS images, PLC, PostgreSQL, gateway,
 certificates and all volumes stay under operator control. The public calendar
@@ -46,6 +46,13 @@ review deployment changes, restrict write access, and revoke the dedicated keys
 when maintainers or the server change. GitHub's private-repository protection
 features depend on the organisation plan.
 
+As checked on 2026-10-07, the organisation is on GitHub Free and the API refuses
+branch protection for these private repositories. CI therefore runs but cannot
+be made a required merge check on this plan. CODEOWNERS identifies reviewers; it
+does not enforce review by itself. Keep repository write access narrow and use
+reviewed PRs. An eligible paid plan is needed to enforce protected default
+branches without making the repositories public.
+
 ## Server layout and bootstrap
 
 Python 3.12+, Git, Docker Compose, OpenSSH and curl are required. Existing live
@@ -78,7 +85,8 @@ CI workflow on the default branch to test the complete path. Keep the default
 
 A global VPS lock serializes all app builds/cutovers. The receiver fetches the
 current branch, checks the requested SHA, and refuses automatic changes to
-`deploy/`, `infra/`, Compose topology, the social SQL schema or verifier store.
+`deploy/`, `infra/`, `fixture/`, `vendor/`, Compose topology, the social SQL schema
+or verifier store. Documentation-only changes in those directories are allowed.
 It extracts the checked source into a separate release directory and builds
 without live secrets. It then overlays only the selected image on the existing
 approved Compose topology, runs `config --quiet`, and recreates only that app
@@ -125,7 +133,8 @@ require disposable acceptance, a coordinated backup and operator rollout using
 the existing overlay runbooks. This prevents an app merge from accidentally
 restarting databases or replacing the native authorization boundary.
 
-`python3 deploy/test_receive.py` tests the forced-command parser. `actionlint`
+`python3 deploy/test_receive.py` tests command parsing, bounded opaque token
+transport and the paths requiring operator review. `actionlint`
 validates workflow syntax locally. Actions use immutable commit SHAs; the secret
 scanner binary is pinned by version and SHA-256. See
 [GitHub secure use guidance](https://docs.github.com/en/actions/reference/security/secure-use).

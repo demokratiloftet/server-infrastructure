@@ -1,4 +1,5 @@
 import importlib.util
+import io
 from pathlib import Path
 import unittest
 
@@ -12,6 +13,20 @@ class CommandBoundary(unittest.TestCase):
         for command in ['', 'bash', 'deploy main', 'deploy ' + 'a' * 39, 'deploy ' + 'a' * 40 + '; id', 'deploy ' + 'a' * 40 + '\n', 'deploy ' + 'A' * 40]:
             with self.subTest(command=command), self.assertRaises(ValueError):
                 receiver.requested_sha(command)
+
+    def test_token_transport_accepts_opaque_formats_without_control_characters(self):
+        for token in ['synthetic.token+/=_-:value', 'x' * 8192]:
+            self.assertEqual(receiver.read_token(io.StringIO(token + '\n')), token)
+        for token in ['', 'x' * 8193, 'contains space', 'tab\tvalue', 'nul\x00value', 'carriage\rvalue']:
+            with self.subTest(length=len(token)), self.assertRaises(ValueError):
+                receiver.read_token(io.StringIO(token + '\n'))
+
+    def test_topology_schema_and_fixture_changes_need_operator_review(self):
+        for path in ['deploy/compose.sh', 'infra/gateway.mjs', 'compose.yaml',
+                     'server/db.mjs', 'src/store.ts', 'fixture/Dockerfile', 'vendor/identity.tgz']:
+            with self.subTest(path=path):
+                self.assertTrue(receiver.requires_operator_review([path]))
+        self.assertFalse(receiver.requires_operator_review(['public/app.js', 'server/routes.mjs', 'fixture/README.md']))
 
 if __name__ == '__main__':
     unittest.main()
