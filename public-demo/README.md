@@ -211,6 +211,18 @@ The full `Dockerfile` rebuilds the pinned upstream Bluesky client. For a gateway
 maintenance release with unchanged client patches, `Dockerfile.gateway` accepts a
 locally tagged, reviewed gateway image via `--build-arg SOCIAL_ASSETS_IMAGE=...`.
 It copies only `/social/web-build`, then compiles current gateway code into a fresh
-Node 24 image. Record the source image ID and source commit. Never use this shortcut
-when changing `patch-social.ts` or `browser-runtime.ts`; verify the full build then.
+Node 24 image. Record the source image ID and source commit. Use this shortcut only when browser behavior is unchanged. Changes to
+`patch-social.ts` or `browser-runtime.ts` require a verified full build; behavior
+changes also require shipping its new assets.
 Keep the active Løftet overlay and its compiled gateway adapter during VPS rollout.
+
+## Original PDS process hardening
+
+The maintained PDS derivative runs as `node` (UID/GID 1000), with a read-only root,
+all Linux capabilities dropped, no privilege escalation, and a bounded `/tmp`.
+A fresh Docker volume inherits ownership from the image. For an existing volume,
+stop the PDS, take and verify a consistent backup, then change ownership of that
+exact PDS volume to UID/GID 1000 before starting the new derivative. Do not change
+another service's volume or use a broader host path. Upstream image/digest, database
+format, signing keys and identity documents remain unchanged. The old root-running
+image can read the same data for image rollback; data restore is a separate operation.

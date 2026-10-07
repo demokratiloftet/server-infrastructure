@@ -11,3 +11,6 @@ FROM ghcr.io/bluesky-social/pds@sha256:05e164855fa1a3cf251c002210c46f8c86e7ae27b
 COPY --from=typescript /source/dist/public-demo/patch-pds.js /tmp/patch-pds.mjs
 COPY --from=typescript /source/dist/public-demo/pds-boundary.js /tmp/pds-boundary.mjs
 RUN node /tmp/patch-pds.mjs
+
+RUN mkdir -p /app/data && chown node:node /app/data
+USER node

@@ -17,6 +17,9 @@ for service in ['pds','plc','bsky','relay','jetstream','feedgen','ozone','redis'
         assert set(c['NetworkSettings']['Networks'])=={network},service+' has unexpected networks'
         assert not c['HostConfig']['PortBindings'],service+' has a published port'
     assert not any('docker.sock' in m['Source'] for m in c['Mounts']),service+' has Docker access'
+pds=json.loads(subprocess.check_output(['docker','inspect',subprocess.check_output(compose+['ps','-q','pds'],text=True).strip()]))[0]
+assert pds['Config']['User']=='node' and pds['HostConfig']['ReadonlyRootfs']
+assert pds['HostConfig']['CapDrop']==['ALL'] and not pds['HostConfig']['CapAdd']
 script=(root/'dist/public-demo/test/isolation.js').read_text()
 for service in ['pds','plc','bsky','public-calendar','public-gateway']:
     print('Checking '+service,flush=True)

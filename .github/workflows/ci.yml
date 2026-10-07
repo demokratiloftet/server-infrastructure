@@ -39,6 +39,10 @@ jobs:
           python3 public-demo/preflight.py --staging
           python3 spaces-demo/configure.py --staging
           python3 spaces-demo/verify.py --staging --config-only
+      - name: Verify original PDS patch and non-root image
+        run: |
+          docker build -t loftet-pds:ci -f public-demo/Dockerfile.pds .
+          test "$(docker image inspect loftet-pds:ci --format '{{.Config.User}}')" = node
       - name: Run isolated Spaces acceptance
         run: |
           python3 spaces-demo/test/configure.py

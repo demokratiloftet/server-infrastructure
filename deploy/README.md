@@ -138,3 +138,23 @@ transport and the paths requiring operator review. `actionlint`
 validates workflow syntax locally. Actions use immutable commit SHAs; the secret
 scanner binary is pinned by version and SHA-256. See
 [GitHub secure use guidance](https://docs.github.com/en/actions/reference/security/secure-use).
+
+## Current compiled infrastructure release
+
+The VPS retains its approved configuration checkout. Compiled infrastructure images
+and the bundled social gateway adapter are stored under
+`/var/lib/loftet-deploy/server-infrastructure/releases/`. Its root-owned `current.json`
+records source revisions, actual images and the backup location; `runtime.yaml`
+selects those images and the compiled adapter mount. The approved VPS copy of
+`/root/loftet-social/deploy/compose.sh` loads this file and both managed calendar/social
+`image.json` files before command-line overrides. Preserve these operator additions
+when updating that wrapper from source. App CI still changes only its own image.
+
+Infrastructure rollback must use the recorded previous images **together with** the
+matching gateway adapter mount and entrypoint. The gateway's original Bluesky web
+assets are recorded separately. Restoring only an image while leaving an incompatible
+adapter is insufficient. Previous wrapper/configuration and image IDs are backed up
+under `/root/loftet-rollbacks/typescript-20261007/infrastructure`; do not restore data
+volumes merely to undo a code release. The PDS hardening keeps the upstream database
+format and identities unchanged; its prior root-running image can read UID 1000-owned
+data if an image rollback is needed.

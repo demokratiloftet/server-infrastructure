@@ -55,6 +55,10 @@ services:
     depends_on:
       private-dns:
         condition: service_started
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=32m"]
     restart: unless-stopped
     dns:
       - ${DEMO_NET_PREFIX:-10.249.90}.2

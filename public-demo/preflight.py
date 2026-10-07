@@ -12,6 +12,7 @@ for name in ['pds','plc','bsky','relay','jetstream','feedgen','ozone','public-ca
     assert set(service['networks'])=={'default'},name+' must have only the private network'
     assert not service.get('ports'),name+' must have no host bindings'
     assert service.get('dns')==[str(subnet.network_address+2)],name+' must use authoritative private DNS'
+assert c['services']['pds']['read_only'] and c['services']['pds']['cap_drop']==['ALL']
 pds=c['services']['pds']['environment']
 for key in ['PDS_DEV_MODE','PDS_DISABLE_SSRF_PROTECTION','PDS_ACCEPTING_REPO_IMPORTS']:assert pds[key]=='false',key
 assert pds['PDS_CRAWLERS']=='' and pds['PDS_RATE_LIMITS_ENABLED']=='true'
