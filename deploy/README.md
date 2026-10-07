@@ -22,13 +22,16 @@ archives deliberately, not by silently changing a running shared library.
 ## Trust and credentials
 
 Install reviewed `receive.py` as `/usr/local/sbin/loftet-deploy`, owned by root
-and not writable from app containers. Each repository gets two separate keys:
+and not writable from app containers. Each deployment uses two separate credentials:
 
 1. An SSH **trigger key**, stored as GitHub secret `DEMO_DEPLOY_SSH_KEY`. Its public
    key in `/root/.ssh/authorized_keys` has `restrict,command="/usr/local/sbin/loftet-deploy REPOSITORY"`.
    It has no interactive shell, forwarding, PTY, arbitrary command or file upload.
-2. A GitHub **read-only deploy key**, stored only on the VPS, used by that repo's
-   source checkout. It cannot push, change settings or read another repository.
+2. The job's short-lived `GITHUB_TOKEN`, with only `contents: read`, is piped over
+   that SSH connection. Git uses it only for this repository's HTTPS fetch. It is
+   not written to disk, Git configuration, command arguments or logs. The VPS
+   holds no long-lived GitHub PAT or repository read key. GitHub deploy keys are
+   disabled by the organisation's current policy.
 
 Pin the VPS host key in `DEMO_DEPLOY_KNOWN_HOSTS`, obtained through the existing
 trusted SSH connection; do not trust a fresh unauthenticated `ssh-keyscan`.
@@ -53,15 +56,14 @@ not bootstrap a new PDS or generate replacement identities.
 /var/lib/loftet-deploy/
   deploy.lock
   REPOSITORY/
-    github-read-key       # 0600, unique read-only GitHub key
-    source/               # Git checkout; SSH uses that key and pinned github.com host keys
+    source/               # Git repository with an HTTPS origin; no stored credential
     releases/FULL_SHA/    # source-only build contexts; no live environment files
     image.json           # Compose override selecting the checked image
     current.json         # deployed SHA/image and prior image
 ```
 
-Create `source/` from the exact private repo and configure `core.sshCommand` with
-its dedicated key, `IdentitiesOnly=yes`, and strict pinned host-key checking.
+Create an empty `source/` Git repository with the exact HTTPS origin and no
+credential helper; the receiver fetches using the scoped workflow token.
 Before enabling the trigger, compare source with the running demo, back up the
 app's durable storage and keys, record its current image ID, and set `current.json`
 to `{ "sha": "REVIEWED_BASELINE_SHA", "image": "EXISTING_IMAGE_ID" }`.

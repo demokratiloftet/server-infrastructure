@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Root-owned, forced-command receiver. Install outside any deployment checkout."""
+import base64
 import fcntl
 import json
 import os
@@ -45,7 +46,22 @@ def main():
     with (BASE / 'deploy.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         git = ('git', '-C', str(source))
-        run(*git, 'fetch', '--no-tags', 'origin', branch)
+        # The organisation disables deploy keys. Use only this workflow's
+        # short-lived, repository-scoped contents:read token, received over SSH.
+        token = sys.stdin.readline(4097).strip()
+        if not token or len(token) > 4096 or not re.fullmatch(r'[A-Za-z0-9_]+', token):
+            raise ValueError('A short-lived GitHub Actions read token is required')
+        fetch_env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0',
+                     'GIT_CONFIG_COUNT': '2',
+                     'GIT_CONFIG_KEY_0': 'http.https://github.com/.extraheader',
+                     'GIT_CONFIG_VALUE_0': 'AUTHORIZATION: basic ' + base64.b64encode(('x-access-token:' + token).encode()).decode(),
+                     'GIT_CONFIG_KEY_1': 'credential.helper', 'GIT_CONFIG_VALUE_1': ''}
+        try:
+            run(*git, 'fetch', '--no-tags', 'origin', branch, env=fetch_env)
+        finally:
+            fetch_env.clear()
+            token = ''
+
         head = capture(*git, 'rev-parse', 'FETCH_HEAD')
         if head != sha:
             raise ValueError('Only the current default-branch head may deploy; rerun CI for the new head')
