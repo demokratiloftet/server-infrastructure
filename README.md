@@ -1,15 +1,78 @@
-# Server infrastructure
+# Demokratiløftet infrastructure and demos
 
-Our deployment configuration for [Eurosky](https://github.com/eurosky-social/u-at-proto), included unchanged as a Git submodule in `upstream/`.
+Private deployment source for the Demokratiløftet demos: Eurosky/AT Protocol,
+private PLC/PDS, the public gateway, and experimental Spaces support. Upstream
+[Eurosky](https://github.com/eurosky-social/u-at-proto) is pinned as the `upstream/`
+Git submodule; container images are pinned by digest. DNS/TLS uses Vercel DNS.
 
-We use **Vercel DNS**, so our overrides adapt the DNS script and Traefik configuration. All container images are **pinned by digest** to keep versions consistent between deployments.
+## Repositories
 
-The opt-in [public demo deployment](public-demo/README.md) supports open signup
-for both apps while keeping federation inside the VPS. It defaults to loopback
-HTTPS. Production public access has not been enabled.
+All implementation repositories are private. Clone using an account with access
+to the `demokratiloftet` organisation.
 
-See [the original audit](PUBLIC-DEMO-PLAN.md) for the problems this addresses.
+| Repository | Purpose | Local start |
+| --- | --- | --- |
+| [loftet-social](https://github.com/demokratiloftet/loftet-social) | Open/closed groups, events, native Spaces access checks | `pnpm install --frozen-lockfile`, `pnpm demo:setup`, `pnpm demo:up` |
+| [calendar-app](https://github.com/demokratiloftet/calendar-app) | Calendar, OAuth and synthetic club permissions | Start `local-sandbox`, then `npm ci`, `npm run dev` |
+| [identity-component](https://github.com/demokratiloftet/identity-component) | Reusable server-side AT OAuth/OIDC/linking packages | `npm ci`, `npm test`, `npm run test:package` |
+| [attestation-issuer](https://github.com/demokratiloftet/attestation-issuer) | Signed claims, scoped policy, revocation and independent verifier | `npm run dev` |
+| [local-sandbox](https://github.com/demokratiloftet/local-sandbox) | Disposable loopback-only PDS/PLC for development | `npm run up`, `npm run verify` |
+| [organisation-verifier](https://github.com/demokratiloftet/organisation-verifier) | Brreg/AT Protocol verification, isolated publication fixture | See its README |
+| This repository | Persistent VPS topology, gateway and experimental PDS patches | Use the matching overlay guide below |
 
-An optional [Spaces private-group demo](spaces-demo/README.md) adds a small
-members-only noticeboard at the calendar host's `/spaces/` path. It uses a separate
-alpha PDS and volume; the existing stack is unchanged until explicitly enabled.
+## Clone and check without production credentials
+
+Requires Git, Node 24.17+, Python 3 and Docker Compose supporting `!override` and
+`!reset`. These commands create disposable local test configuration only:
+
+```sh
+gh repo clone demokratiloftet/server-infrastructure
+cd server-infrastructure
+git submodule update --init --recursive
+node --test public-demo/test/*.test.mjs spaces-demo/test/*.test.mjs
+npm ci --ignore-scripts --prefix public-demo/calendar
+npm test --prefix public-demo/calendar
+python3 public-demo/test/configure.py
+python3 public-demo/preflight.py --staging
+```
+
+For a full disposable stack follow [public-demo/README.md](public-demo/README.md).
+For the smallest local social app use its own self-contained repository above.
+The base infrastructure needs operator-owned DNS, TLS, service identities and
+secrets; copying `.env.example` is not enough to safely start a shared server.
+Never print resolved Compose configuration, since it includes credentials.
+
+## Which deployment owns what
+
+- [Public demo](public-demo/README.md): original Bluesky client, public calendar,
+  private PDS/PLC/federation, exact-route HTTPS gateway. No public AT federation.
+- [Spaces noticeboard](spaces-demo/README.md): optional standalone alpha example.
+- [Løftet overlay](https://github.com/demokratiloftet/loftet-social/blob/main/deploy/README.md):
+  the currently deployed social app and its separate Spaces PDS/database, plus
+  OAuth ingress and approved domain handles. Use its `deploy/compose.sh` wrapper
+  for the live shared stack. A base-only gateway update restores old routing.
+
+The standalone noticeboard and Løftet overlay both reserve `.21` for a Spaces
+PDS. They are **alternative overlays**, not two apps to enable together against
+the same stack. The social app owns separate volumes; never repoint an alpha PDS
+at the original PDS's data.
+
+`master` consolidates the previously local `feat/public-demo-private-federation`
+and `feat/spaces-private-demo` branches. Both branches are retained for provenance.
+Publishing this source does not itself switch the VPS infrastructure branch.
+Calendar now supports public-demo mode in its own repository; the old committed
+snapshot remains here for reproducible historical builds and rollback.
+
+## Operations and safety
+
+See [automatic app deployment and rollback](deploy/README.md),
+[security policy](SECURITY.md), and [review evidence](docs/REVIEW-2026-10-07.md).
+Application CI tests every PR and main/master push. Infrastructure CI validates
+both gateway boundaries and private topology. Shared networking, PDS images,
+volumes and database migrations are deliberately operated separately from app
+redeploys, with a coordinated backup and explicit migration review.
+
+These are synthetic-data demos. Spaces is experimental authorization, not
+end-to-end encryption. Authentication/handle ownership is not proof of real
+organisation membership. No review can certify all future code or dependencies
+as safe; tests and audits must remain part of each change.

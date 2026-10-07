@@ -1,0 +1,37 @@
+name: CI
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.17.0'
+      - name: Scan Git history for secrets
+        run: bash .github/scripts/scan-secrets.sh
+      - run: python3 deploy/test_receive.py
+      - run: node --test public-demo/test/*.test.mjs spaces-demo/test/*.test.mjs
+      - run: npm ci --ignore-scripts --prefix public-demo/calendar
+      - run: npm audit --audit-level=moderate --prefix public-demo/calendar
+      - run: npm test --prefix public-demo/calendar
+      - name: Validate private Compose topology
+        run: |
+          python3 public-demo/test/configure.py
+          python3 public-demo/preflight.py --staging
+          python3 spaces-demo/configure.py --staging
+          python3 spaces-demo/verify.py --staging --config-only

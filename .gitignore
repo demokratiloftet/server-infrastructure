@@ -12,3 +12,12 @@ public-demo/test-results/
 public-demo/test/.runtime/
 __pycache__/
 spaces-demo/test/.runtime/
+
+# Private operator state and audit output
+.secrets/
+.runtime/
+*.sqlite*
+*.pem
+*.key
+*.log
+.DS_Store

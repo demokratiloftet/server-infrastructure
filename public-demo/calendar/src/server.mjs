@@ -29,7 +29,6 @@ async function body(req) {
   let text = ''; for await (const chunk of req) { text += chunk; if (text.length > 16384) throw Object.assign(new Error('Forespørselen er for stor'), {status:413}); }
   try { return JSON.parse(text || '{}'); } catch { throw Object.assign(new Error('Ugyldig JSON'),{status:400}); }
 }
-const pathSafe = req => new URL(req.url,origin).pathname;
 const server = http.createServer(async (req,res) => {
   res.setHeader('content-security-policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
   res.setHeader('x-content-type-options','nosniff'); res.setHeader('referrer-policy','no-referrer'); res.setHeader('cache-control','no-store');
@@ -97,7 +96,7 @@ const server = http.createServer(async (req,res) => {
     if (path === '/api/seed') return send(200,await service.seed());
     return send(404,{error:'Not found'});
   } catch (error) {
-    console.error(pathSafe(req),error.name); // Never log callback URLs, tokens or raw provider errors.
+    console.error("Calendar request failed:",error.name); // Never log callback URLs, tokens or raw provider errors.
     send(error.status && error.status < 500 ? error.status : 503,{error: error.status && error.status < 500 ? error.message : 'Kan ikke nå sandkassen. Kontroller at PDS kjører, og at demokontoene er konfigurert.'});
   }
 });
