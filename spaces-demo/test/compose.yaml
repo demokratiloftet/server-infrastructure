@@ -75,7 +75,7 @@ networks:
     internal: true
     enable_ipv6: false
     ipam:
-      config: [{ subnet: 10.249.93.0/24 }]
+      config: [{ subnet: 10.249.93.0/24, ip_range: 10.249.93.128/25 }]
   ingress: {}
 volumes:
   spaces-pds-data: {}
