@@ -1,0 +1,43 @@
+# Use with compose.vps.yaml. Routes share the existing private Tailscale Traefik.
+services:
+  calendar:
+    ports: !reset []
+    extra_hosts:
+      - "pds.dev.demokratiloftet.no:${PRIVATE_PROXY_IP:-100.83.205.99}"
+      - "plc.dev.demokratiloftet.no:${PRIVATE_PROXY_IP:-100.83.205.99}"
+      - "${DEMO_IDP_HOST}:${PRIVATE_PROXY_IP:-100.83.205.99}"
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${ATPROTO_DOCKER_NETWORK:-server-infrastructure_default}
+      traefik.http.routers.loftet-calendar.rule: Host(`${CALENDAR_HOST:?Set private calendar hostname}`)
+      traefik.http.routers.loftet-calendar.entrypoints: websecure
+      traefik.http.routers.loftet-calendar.tls.certresolver: letsencrypt
+      traefik.http.services.loftet-calendar.loadbalancer.server.port: "3000"
+  demo-idp:
+    image: loftet-calendar:demo
+    pull_policy: never
+    command: [idp]
+    init: true
+    read_only: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    environment:
+      DEMO_IDP_ISSUER: https://${DEMO_IDP_HOST:?Set private demo IdP hostname}
+      DEMO_CLIENT_ORIGIN: ${APP_ORIGIN:?Set HTTPS calendar origin}
+      DEMO_CLIENT_ID: loftet-demo
+      DEMO_OIDC_SECRET: ${DEMO_OIDC_SECRET:?Set separate demo IdP client secret}
+    networks: [atproto]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${ATPROTO_DOCKER_NETWORK:-server-infrastructure_default}
+      traefik.http.routers.loftet-identity.rule: Host(`${DEMO_IDP_HOST}`)
+      traefik.http.routers.loftet-identity.entrypoints: websecure
+      traefik.http.routers.loftet-identity.tls.certresolver: letsencrypt
+      traefik.http.services.loftet-identity.loadbalancer.server.port: "3002"
+    healthcheck:
+      test: [CMD, node, -e, "require('node:http').get('http://127.0.0.1:3002/health',{headers:{host:new URL(process.env.DEMO_IDP_ISSUER).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

@@ -21,11 +21,15 @@ jobs:
           submodules: recursive
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24.17.0'
+          node-version: "24.17.0"
       - name: Scan Git history for secrets
         run: bash .github/scripts/scan-secrets.sh
       - run: python3 deploy/test_receive.py
-      - run: node --test public-demo/test/*.test.mjs spaces-demo/test/*.test.mjs
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm audit --audit-level=moderate
+      - run: npm test
       - run: npm ci --ignore-scripts --prefix public-demo/calendar
       - run: npm audit --audit-level=moderate --prefix public-demo/calendar
       - run: npm test --prefix public-demo/calendar
@@ -35,3 +39,17 @@ jobs:
           python3 public-demo/preflight.py --staging
           python3 spaces-demo/configure.py --staging
           python3 spaces-demo/verify.py --staging --config-only
+      - name: Run isolated Spaces acceptance
+        run: |
+          python3 spaces-demo/test/configure.py
+          sh spaces-demo/test/compose.sh build
+          sh spaces-demo/test/compose.sh up -d --wait
+          node dist/spaces-demo/test/smoke.js
+          sh spaces-demo/test/compose.sh exec -T spaces-app node dist/test/native.js
+          python3 spaces-demo/verify.py --test
+      - name: Stop test containers
+        if: always()
+        run: |
+          if test -f spaces-demo/test/.runtime/test.env; then
+            sh spaces-demo/test/compose.sh down
+          fi

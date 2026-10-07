@@ -23,10 +23,16 @@ class CommandBoundary(unittest.TestCase):
 
     def test_topology_schema_and_fixture_changes_need_operator_review(self):
         for path in ['deploy/compose.sh', 'infra/gateway.mjs', 'compose.yaml',
-                     'server/db.mjs', 'src/store.ts', 'fixture/Dockerfile', 'vendor/identity.tgz']:
+                     'server/db.mjs', 'server/db.ts', 'src/store.ts', 'fixture/Dockerfile', 'vendor/identity.tgz']:
             with self.subTest(path=path):
                 self.assertTrue(receiver.requires_operator_review([path]))
         self.assertFalse(receiver.requires_operator_review(['public/app.js', 'server/routes.mjs', 'fixture/README.md']))
+
+class RollbackRecord(unittest.TestCase):
+    def test_same_release_retry_keeps_distinct_previous_image(self):
+        previous = {'sha': 'new', 'image': 'app:new', 'previous': 'app:old'}
+        self.assertEqual(receiver.deployment_record('new', 'app:new', previous)['previous'], 'app:old')
+        self.assertEqual(receiver.deployment_record('newer', 'app:newer', previous)['previous'], 'app:new')
 
 if __name__ == '__main__':
     unittest.main()

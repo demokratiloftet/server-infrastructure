@@ -1,3 +1,13 @@
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532 AS typescript
+WORKDIR /source
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci --ignore-scripts
+COPY public-demo ./public-demo
+COPY spaces-demo ./spaces-demo
+COPY scripts ./scripts
+RUN npm run build
+
 FROM ghcr.io/bluesky-social/pds@sha256:05e164855fa1a3cf251c002210c46f8c86e7ae27bddc7a96045da25483840826
-COPY patch-pds.mjs pds-boundary.mjs /tmp/
+COPY --from=typescript /source/dist/public-demo/patch-pds.js /tmp/patch-pds.mjs
+COPY --from=typescript /source/dist/public-demo/pds-boundary.js /tmp/pds-boundary.mjs
 RUN node /tmp/patch-pds.mjs

@@ -3,7 +3,7 @@
 An opt-in addition to `feat/public-demo-private-federation`. A group owner posts
 notices and grants/removes read access for other demo accounts. No calendar
 integration, external accounts, federation, relay, notifications or chat service.
-The app has no dependencies and no database: group configuration, membership and
+The app uses Zod for runtime response validation and has no database: group configuration, membership and
 notices live on a **separate operator-hosted Spaces PDS**. This is not the existing
 calendar/social PDS, and users create separate demo accounts.
 
@@ -105,25 +105,28 @@ Reference: [Spaces alpha announcement](https://atproto.com/blog/atproto-spaces-a
 ## Verification
 
 ```sh
-npm test --prefix spaces-demo
-npm test --prefix public-demo
+npm ci --ignore-scripts
+npm test
 ```
 
 The standalone acceptance fixture has its own PLC/Postgres/PDS volumes, subnet
-`10.249.93.0/24`, synthetic secrets and loopback HTTPS port `19443`. It uses the
-existing `loftet-public-gateway:private-demo` image (build with the base demo's
-wrapper first if absent), mounting the current gateway source for the check.
+`10.249.93.0/24`, synthetic secrets and loopback HTTPS port `19443`. It builds a small TypeScript gateway fixture locally; no pre-existing gateway
+image or Bluesky web build is needed.
 It never reads live environment files and cannot target production.
 
 ```sh
 python3 spaces-demo/test/configure.py  # once; fails if already configured
-sh spaces-demo/test/compose.sh build spaces-pds spaces-app
+sh spaces-demo/test/compose.sh build
 sh spaces-demo/test/compose.sh up -d --wait
-node spaces-demo/test/smoke.mjs
-sh spaces-demo/test/compose.sh exec -T spaces-app node --input-type=module - < spaces-demo/test/native.mjs
+node dist/spaces-demo/test/smoke.js
+sh spaces-demo/test/compose.sh exec -T spaces-app node dist/test/native.js
 python3 spaces-demo/verify.py --test
 sh spaces-demo/test/compose.sh down    # retains disposable data
 ```
+
+Set `SPACES_TEST_PROJECT` to use a separate named set of test volumes (stop the
+other fixture first; the loopback port and subnet are intentionally fixed). Keep
+generated credentials with their volumes; never regenerate one without the other.
 
 The smoke test checks real signup, publication, member reads, outsider refusal,
 owner-only changes, removal, logout, CSRF and gateway denials. It creates fresh

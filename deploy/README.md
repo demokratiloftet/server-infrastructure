@@ -6,15 +6,15 @@ to deploy exactly that commit. No PR job receives a deployment credential.
 
 ## Scope
 
-| Repository | Default branch | Updated service |
-| --- | --- | --- |
-| `loftet-social` | `main` | `server-infrastructure` / `loftet-social` |
-| `calendar-app` | `master` | `server-infrastructure` / `public-calendar` |
-| `organisation-verifier` | `main` | `organisation-verifier` / `app` (loopback operator UI) |
+| Repository              | Default branch | Updated service                                        |
+| ----------------------- | -------------- | ------------------------------------------------------ |
+| `loftet-social`         | `main`         | `server-infrastructure` / `loftet-social`              |
+| `calendar-app`          | `master`       | `server-infrastructure` / `public-calendar`            |
+| `organisation-verifier` | `main`         | `organisation-verifier` / `app` (loopback operator UI) |
 
 The original infrastructure branch, PDS images, PLC, PostgreSQL, gateway,
 certificates and all volumes stay under operator control. The public calendar
-uses `calendar-app/Dockerfile.public`; its old infrastructure snapshot remains
+uses `calendar-app/Dockerfile.public`; its reviewed infrastructure snapshot remains
 available. The local sandbox and attestation issuer are not deployed publicly.
 The identity repository creates packages; consumers update their vendored
 archives deliberately, not by silently changing a running shared library.

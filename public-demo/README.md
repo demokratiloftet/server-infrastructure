@@ -63,16 +63,18 @@ not read production credentials, use Tailscale or edit DNS. Do not run it with
 production project names or volumes.
 
 ```sh
+npm ci --ignore-scripts
+npm test
 python3 public-demo/test/configure.py  # first run only; keep generated credentials
 python3 public-demo/preflight.py --staging
-sh public-demo/test/compose.sh build pds public-calendar public-gateway
+sh public-demo/test/compose.sh build pds public-calendar public-gateway private-dns tailscale-traefik
 sh public-demo/test/compose.sh up -d --wait pds relay bsky
 python3 public-demo/test/provision.py
 sh public-demo/test/compose.sh up -d --wait
 python3 public-demo/register-relay.py --staging
-sh public-demo/test/smoke.sh  # Linux VPS; local Node can run smoke.mjs directly
+sh public-demo/test/smoke.sh  # Linux VPS; local Node can run dist/public-demo/test/smoke.js
 python3 public-demo/verify.py --staging
-docker run --rm -v "$PWD/public-demo:/demo:ro" -w /demo node:22-bookworm-slim node --test test/boundary.test.mjs
+npm test
 ```
 
 Browser testing uses a dedicated Chrome session with
@@ -81,6 +83,10 @@ Browser testing uses a dedicated Chrome session with
 `:18443`, because Host and OAuth origins are intentionally strict. Do not disable
 TLS verification in the real deployment. Test fixtures target the current VPS's
 `dev.demokratiloftet.no` domain.
+
+Use `PUBLIC_DEMO_TEST_PROJECT` for a fresh named set of volumes when needed;
+the fixed test subnet and port still require the other fixture to be stopped.
+Keep generated credentials with their volumes.
 
 Stop the test with `sh public-demo/test/compose.sh down`. This preserves synthetic
 data for repeat tests; no production volumes are selected. Generated credentials,
@@ -121,6 +127,7 @@ configuration: it contains credentials.
    verify all containers for the exact infrastructure project are stopped, then
    remove only those stopped container definitions with `docker rm` (no `-v`).
    Preserve all named volumes and unrelated projects before retrying.
+
 3. Bring up the branch using the public overlay, still bound to loopback:
 
    ```sh
@@ -136,6 +143,7 @@ configuration: it contains credentials.
    Existing relay registration persists; the registration command is idempotent.
    The normal external DNS/bootstrap jobs are deliberately excluded. Do not enable
    `private-bootstrap` or `private-legacy` on this deployment.
+
 4. Check both apps via an SSH tunnel and dedicated browser host mapping, as above
    (map to forwarded port 8443). Test a synthetic signup, OAuth consent, activity
    publishing, social post/image, logout, anonymous social browsing and private API denial. Confirm legacy
@@ -151,6 +159,7 @@ configuration: it contains credentials.
 
    Traefik renews the wildcard by DNS-01; the timer exports it hourly. The gateway
    reloads it without restart. Monitor timer failures and certificate expiry.
+
 6. Only when ready to publish: set `DEMO_BIND_IP='0.0.0.0'` and
    `DEMO_HTTPS_PORT='443'` in ignored `public-demo/.env`, verify the port is unused,
    then `sh public-demo/compose.sh up -d --no-deps public-gateway`.
@@ -163,7 +172,7 @@ configuration: it contains credentials.
    return 401/404 even with a valid token. Test the VPS IP, unknown Host and any
    existing IPv6 address for accidental listeners. Restart the gateway and repeat
    `verify.py`; its firewall must remain effective. Do not run the disposable
-   `smoke.mjs` against production: its target is intentionally the test stack.
+   `dist/public-demo/test/smoke.js` against production: its target is intentionally the test stack.
 
 Do not expose a raw PDS/Traefik port as a shortcut. Do not use a public tunnel that
 bypasses this gateway. Docker-published ports need provider/host Docker-aware
@@ -186,7 +195,7 @@ files and auth keys with their corresponding volumes.
 SSRF exceptions and private DNS. The calendar's `npm test` verifies auth/grants;
 `npm run test:integration` uses the existing disposable local sandbox at port 2583;
 `npm run verify` checks this branch's isolated staging network. The actual public
-stack's signup/post/AppView acceptance is `test/smoke.mjs`.
+stack's signup/post/AppView acceptance is `dist/public-demo/test/smoke.js`.
 
 PDS and social patches deliberately fail the build if pinned source no longer
 matches. On upstream upgrades rerun the full suite and browser flows. The gateway
@@ -195,3 +204,13 @@ allowlist must be reviewed when adding a feature; never replace it with
 Media sessions are held in memory; a gateway restart may require users
 to sign in again. Rate limits are per observed source IP (300 requests/minute,
 10 signups/hour); do not put another proxy in front without reviewing IP trust.
+
+## Rebuild gateway code with reviewed existing browser assets
+
+The full `Dockerfile` rebuilds the pinned upstream Bluesky client. For a gateway
+maintenance release with unchanged client patches, `Dockerfile.gateway` accepts a
+locally tagged, reviewed gateway image via `--build-arg SOCIAL_ASSETS_IMAGE=...`.
+It copies only `/social/web-build`, then compiles current gateway code into a fresh
+Node 24 image. Record the source image ID and source commit. Never use this shortcut
+when changing `patch-social.ts` or `browser-runtime.ts`; verify the full build then.
+Keep the active Løftet overlay and its compiled gateway adapter during VPS rollout.

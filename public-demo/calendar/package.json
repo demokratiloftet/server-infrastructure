@@ -4,23 +4,37 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=24.17 <25"
   },
   "scripts": {
     "dev": "docker compose up -d --build --wait",
     "down": "docker compose down",
     "logs": "docker compose logs -f calendar",
-    "test": "node --test test/*.test.mjs",
-    "test:integration": "node test/integration.mjs",
+    "test": "node --test dist/test/*.test.js",
+    "test:integration": "node dist/test/integration.js",
     "verify": "sh infra/verify.sh",
-    "verify:claim": "node src/cli.mjs"
+    "verify:claim": "node dist/src/cli.js",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc && node scripts/assets.ts",
+    "pretest": "npm run build",
+    "format": "prettier --write src public/*.ts infra/*.ts test scripts",
+    "format:check": "prettier --check src public/*.ts infra/*.ts test scripts",
+    "pretest:integration": "npm run build",
+    "preverify": "npm run build",
+    "preverify:claim": "npm run build"
   },
   "dependencies": {
+    "@loftet/auth": "file:vendor/loftet-auth-0.3.0.tgz",
+    "@loftet/identity": "file:vendor/loftet-identity-0.3.0.tgz",
     "jose": "6.2.12",
     "oidc-provider": "9.12.2",
-    "@loftet/auth": "file:packages/auth"
+    "zod": "4.6.5"
   },
-  "workspaces": [
-    "packages/auth"
-  ]
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "@types/oidc-provider": "9.12.1",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2"
+  }
 }

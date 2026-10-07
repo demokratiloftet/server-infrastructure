@@ -1,0 +1,17 @@
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!public-demo/
+!public-demo/**
+!spaces-demo/
+!spaces-demo/**
+!scripts/
+!scripts/**
+**/.env*
+**/.runtime
+**/node_modules
+**/dist
+**/.tls
+**/.build
+public-demo/calendar

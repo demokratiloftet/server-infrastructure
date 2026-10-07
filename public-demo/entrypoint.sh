@@ -11,4 +11,4 @@ done
 iptables -A OUTPUT -d "$DEMO_PRIVATE_SUBNET" -p tcp -m multiport --dports 3000,2584,53 -j ACCEPT
 iptables -A OUTPUT -d "$DEMO_DNS_IP" -p udp --dport 53 -j ACCEPT
 # Docker embedded DNS forwards only to the authoritative private resolver.
-exec setpriv --reuid=node --regid=node --init-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all --no-new-privs node /demo/gateway.mjs
+exec setpriv --reuid=node --regid=node --init-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all --no-new-privs node /demo/dist/gateway.js

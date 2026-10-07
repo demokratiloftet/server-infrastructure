@@ -1,0 +1,49 @@
+# Separate project. Does not modify or recreate the AT Protocol stack.
+name: loftet-calendar-demo
+services:
+  calendar:
+    build: .
+    image: loftet-calendar:demo
+    entrypoint: [sh, /app/infra/vps-entrypoint.sh]
+    init: true
+    read_only: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    environment:
+      APP_ENV: shared
+      IDENTITY_LOGIN_PROVIDERS_JSON: ${IDENTITY_LOGIN_PROVIDERS_JSON:-[]}
+      VIPPS_ENVIRONMENT: ${VIPPS_ENVIRONMENT:-test}
+      VIPPS_CLIENT_ID: ${VIPPS_CLIENT_ID:-}
+      VIPPS_CLIENT_SECRET: ${VIPPS_CLIENT_SECRET:-}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?Set 32-byte hex auth encryption key}
+      ATPROTO_PDS_ORIGIN: ${ATPROTO_PDS_ORIGIN:?Set canonical HTTPS PDS origin}
+      ATPROTO_PLC_URL: ${ATPROTO_PLC_URL:?Set private HTTPS PLC origin}
+      AUTH_FETCH_ROUTES_JSON: ${AUTH_FETCH_ROUTES_JSON:?Set exact allowed HTTPS auth origins}
+      OIDC_PROVIDERS_JSON: ${OIDC_PROVIDERS_JSON:-[]}
+      APP_ORIGIN: ${APP_ORIGIN:-http://127.0.0.1:3100}
+      PDS_DOCKER_HOST: ${PDS_DOCKER_HOST:-pds}
+      PDS_DOCKER_PORT: ${PDS_DOCKER_PORT:-3000}
+      ORGANISER_HANDLE: ${ORGANISER_HANDLE:?Set organiser demo account}
+      ORGANISER_PASSWORD: ${ORGANISER_PASSWORD:?Set organiser app password}
+      ISSUER_HANDLE: ${ISSUER_HANDLE:?Set issuer demo account}
+      ISSUER_PASSWORD: ${ISSUER_PASSWORD:?Set issuer app password}
+      ISSUER_DID: ${ISSUER_DID:?Pin issuer DID}
+      DEMO_ACCESS_KEY: ${DEMO_ACCESS_KEY:?Set a random 24+ character demo access key}
+    volumes: ["auth-data:/data/auth"]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=4m,mode=1777"]
+    ports: ["127.0.0.1:3100:3000"]
+    networks: [atproto]
+    healthcheck:
+      test: [CMD, node, -e, "require('node:http').get('http://127.0.0.1:3000/health',{headers:{host:new URL(process.env.APP_ORIGIN).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+networks:
+  atproto:
+    external: true
+    name: ${ATPROTO_DOCKER_NETWORK:-server-infrastructure_default}
+
+volumes:
+  auth-data: {}

@@ -1,1 +1,13 @@
-{"name":"loftet-spaces-demo","private":true,"type":"module","engines":{"node":">=22"},"scripts":{"test":"node --test test/*.test.mjs"}}
+{
+  "name": "loftet-spaces-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.17 <25"
+  },
+  "scripts": {
+    "test": "npm --prefix .. test",
+    "build": "npm --prefix .. run build",
+    "typecheck": "npm --prefix .. run typecheck"
+  }
+}

@@ -1,0 +1,16 @@
+*
+!src/
+!src/**
+!public/
+!public/**
+!infra/
+!infra/**
+
+!package.json
+!package-lock.json
+!vendor/
+!vendor/**
+
+!tsconfig.json
+!scripts/
+!scripts/**

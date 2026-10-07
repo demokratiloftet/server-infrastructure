@@ -1,10 +1,21 @@
-FROM node:22-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2
-RUN apt-get update && apt-get install -y --no-install-recommends iptables util-linux && rm -rf /var/lib/apt/lists/*
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY packages ./packages
-RUN npm ci --omit=dev --ignore-scripts && mkdir -p /data/auth && chown node:node /data/auth
+COPY vendor ./vendor
+RUN npm ci --ignore-scripts
+COPY tsconfig.json ./
 COPY src ./src
 COPY public ./public
 COPY infra ./infra
+COPY scripts ./scripts
+RUN npm run build && npm prune --omit=dev --ignore-scripts
+
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532
+RUN apt-get update && apt-get install -y --no-install-recommends iptables util-linux && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json ./
+COPY infra/*.sh ./infra/
+RUN mkdir -p /data/auth && chown node:node /data/auth
 ENTRYPOINT ["sh", "/app/infra/entrypoint.sh"]

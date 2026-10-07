@@ -12,12 +12,12 @@ case "${1:-}" in
   gateway)
     iptables -A OUTPUT -d 172.30.83.10 -p tcp --dport 3000 -j ACCEPT
     iptables -A OUTPUT -d 172.30.83.11 -p tcp --dport 3002 -j ACCEPT
-    program=/app/infra/gateway.mjs ;;
+    program=/app/dist/infra/gateway.js ;;
   idp)
-    program=/app/src/demo-idp.mjs ;;
+    program=/app/dist/src/demo-idp.js ;;
   *)
     iptables -A OUTPUT -d 172.30.83.2 -p tcp -m multiport --dports 2582,2583 -j ACCEPT
     iptables -A OUTPUT -d 172.30.83.11 -p tcp --dport 3002 -j ACCEPT
-    program=/app/src/server.mjs ;;
+    program=/app/dist/src/server.js ;;
 esac
-exec setpriv --reuid=node --regid=node --init-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all node --watch "$program"
+exec setpriv --reuid=node --regid=node --init-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all node "$program"

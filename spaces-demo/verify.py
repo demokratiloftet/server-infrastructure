@@ -59,5 +59,5 @@ for name in ['spaces-pds', 'spaces-app', 'public-gateway']:
         environment = dict(v.split('=', 1) for v in actual['Config']['Env'])
         for key in ['PDS_DEV_MODE', 'PDS_DISABLE_SSRF_PROTECTION', 'PDS_ACCEPTING_REPO_IMPORTS', 'PDS_CRAWLERS', 'PDS_DID_PLC_URL']:
             assert environment[key] == pds['environment'][key]
-    subprocess.run(command + ['exec', '-T', '--user', 'node', name, 'node', '--input-type=module', '-'] + (['gateway'] if name == 'public-gateway' else []), input=(root / 'spaces-demo/test/isolation.mjs').read_text(), text=True, check=True)
+    subprocess.run(command + ['exec', '-T', '--user', 'node', name, 'node', '--input-type=module', '-'] + (['gateway'] if name == 'public-gateway' else []), input=(root / 'dist/spaces-demo/test/isolation.js').read_text(), text=True, check=True)
 print('PASS running Spaces topology and isolation.')

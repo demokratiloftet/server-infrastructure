@@ -1,0 +1,24 @@
+{
+  "name": "demokratiloftet-infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.17 <25"
+  },
+  "scripts": {
+    "build": "tsc && node dist/scripts/assets.js",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test dist/public-demo/test/*.test.js dist/spaces-demo/test/*.test.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "@types/node": "24.19.1",
+    "prettier": "3.9.9"
+  }
+}

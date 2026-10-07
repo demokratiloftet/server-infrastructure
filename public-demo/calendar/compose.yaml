@@ -1,0 +1,74 @@
+name: loftet-calendar
+services:
+  calendar:
+    build: .
+    image: loftet-calendar:local
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    environment:
+      PDS_URL: http://172.30.83.2:2583
+      APP_ORIGIN: http://127.0.0.1:3000
+      APP_ENV: local
+    volumes:
+      - auth-data:/data/auth
+    networks:
+      sandbox:
+        ipv4_address: 172.30.83.10
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+  demo-idp:
+    image: loftet-calendar:local
+    pull_policy: never
+    command: [idp]
+    environment:
+      DEMO_PEOPLE_FILE: /data/auth/people.json
+    volumes: ["demo-people:/data/auth"]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    networks:
+      sandbox:
+        ipv4_address: 172.30.83.11
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3002/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+  gateway:
+    image: loftet-calendar:local
+    pull_policy: never
+    command: [gateway]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      calendar:
+        condition: service_healthy
+      demo-idp:
+        condition: service_healthy
+    ports: ["127.0.0.1:3000:3000", "127.0.0.1:3002:3002"]
+    networks: [sandbox, ingress]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+networks:
+  sandbox:
+    external: true
+    name: loftet-isolated-sandbox_isolated
+  ingress: {}
+
+volumes:
+  auth-data: {}
+  demo-people: {}

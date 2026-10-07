@@ -1,0 +1,22 @@
+{
+  "lexicon": 1,
+  "id": "no.demokratiloftet.demo.clubPublisher",
+  "defs": {
+    "main": {
+      "type": "record", "key": "tid",
+      "description": "Synthetic demo permission to publish events for a fictional club. Authorship is the issuer repository DID, not a record field. Delete to revoke. Not a NIF attestation.",
+      "record": {
+        "type": "object",
+        "required": ["version", "demo", "subject", "clubId", "issuedAt", "expiresAt"],
+        "properties": {
+          "version": {"type": "integer", "const": 1},
+          "demo": {"type": "boolean", "const": true},
+          "subject": {"type": "string", "format": "did"},
+          "clubId": {"type": "string", "minLength": 1, "maxLength": 40},
+          "issuedAt": {"type": "string", "format": "datetime"},
+          "expiresAt": {"type": "string", "format": "datetime"}
+        }
+      }
+    }
+  }
+}

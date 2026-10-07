@@ -1,8 +1,0 @@
-.env*
-.tls
-.build
-node_modules
-test-results
-test
-
-**/node_modules

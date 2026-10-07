@@ -35,8 +35,14 @@ def read_token(stream):
 
 
 def requires_operator_review(paths):
-    protected = ('deploy/', 'infra/', 'compose', 'server/db.mjs', 'src/store.ts', 'fixture/', 'vendor/')
+    protected = ('deploy/', 'infra/', 'compose', 'server/db.mjs', 'server/db.ts', 'src/store.ts', 'fixture/', 'vendor/')
     return any(p.startswith(protected) and not p.endswith('.md') for p in paths)
+
+
+def deployment_record(sha, image, previous):
+    # A retry of the same release must not replace the real rollback target.
+    rollback = previous.get('previous', previous['image']) if previous['image'] == image else previous['image']
+    return {'sha': sha, 'image': image, 'previous': rollback}
 
 
 def run(*args, **kwargs):
@@ -113,7 +119,7 @@ def main():
             override.write_text(json.dumps({'services': {service: {'image': previous['image']}}}))
             run(*compose, 'up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '90', service)
             raise
-        record = {'sha': sha, 'image': image, 'previous': previous['image']}
+        record = deployment_record(sha, image, previous)
         pending = root / 'current.next'
         pending.write_text(json.dumps(record) + '\n')
         pending.replace(previous_file)

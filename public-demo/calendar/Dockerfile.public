@@ -1,0 +1,21 @@
+# Runtime for the existing internal VPS network; ingress remains in infrastructure.
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532 AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY vendor ./vendor
+RUN npm ci --ignore-scripts
+COPY tsconfig.json ./
+COPY src ./src
+COPY public ./public
+COPY infra ./infra
+COPY scripts ./scripts
+RUN npm run build && npm prune --omit=dev --ignore-scripts
+
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json ./
+RUN mkdir -p /data/auth && chown node:node /data/auth
+USER node
+ENTRYPOINT ["node", "/app/dist/src/server.js"]

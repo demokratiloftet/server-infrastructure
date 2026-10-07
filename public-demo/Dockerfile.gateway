@@ -1,0 +1,19 @@
+ARG SOCIAL_ASSETS_IMAGE=loftet-public-gateway:private-demo
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532 AS typescript
+WORKDIR /source
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci --ignore-scripts
+COPY public-demo ./public-demo
+COPY spaces-demo ./spaces-demo
+COPY scripts ./scripts
+RUN npm run build
+
+FROM ${SOCIAL_ASSETS_IMAGE} AS assets
+FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532
+RUN apt-get update && apt-get install -y --no-install-recommends iptables util-linux && rm -rf /var/lib/apt/lists/*
+WORKDIR /demo
+COPY package.json ./
+COPY --from=typescript /source/dist/public-demo ./dist
+COPY public-demo/entrypoint.sh ./entrypoint.sh
+COPY --from=assets /social/web-build /social/web-build
+ENTRYPOINT ["sh","/demo/entrypoint.sh"]

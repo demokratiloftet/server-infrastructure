@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+!*.env.example
+node_modules/
+artifacts/
+*.log
+!.env.vps.example
+
+.secrets/
+
+# Private operator state and audit output
+.secrets/
+.runtime/
+*.sqlite*
+*.pem
+*.key
+*.log
+.DS_Store
+
+dist/
+*.tsbuildinfo
