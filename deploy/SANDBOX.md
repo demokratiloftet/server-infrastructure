@@ -4,12 +4,16 @@ LOFT-98 reuses the existing VPS, private Traefik, DNS provider, certificate reso
 
 Each repository gets `https://<repo>.hackaton.demokratiloftet.no`. Separate subdomains avoid frontend base-path changes and give apps distinct browser origins. They are not separate sites for every cookie/CSRF policy: applications still need host-only cookies and proper authorization. DNS uses the requested spelling `hackaton`.
 
-## Register a reviewed repository
+## Operator only: register a reviewed repository
+
+Participants do not run this command. They create an app repository and give its name to the VPS operator. The operator registers it once; participants then deploy by pushing to `main`, without further operator involvement for ordinary app updates.
+
+The identity path below is the operator’s existing local SSH key, not a shared participant credential. It stays on the operator’s machine and is never uploaded to GitHub. Registration generates a different, per-app key for Actions, restricted to deploying that app. If only one person has operator access, new registrations depend on that person; this version does not provide self-service registration.
 
 Use a private `demokratiloftet` repository created from the template, with `main` as its default branch. Review its Dockerfile, code, data needs and trusted writers first.
 
 ```sh
-python3 deploy/register.py my-app --identity ~/.ssh/hostinger
+python3 deploy/register.py my-app --identity /path/to/your/operator-ssh-key
 ```
 
 Requires Python 3, Git, GitHub CLI with repo administration rights, operator SSH access and a previously verified VPS key in `~/.ssh/known_hosts`. The default VPS is `187.124.129.149`; `--host` and `--known-hosts` can override these.
