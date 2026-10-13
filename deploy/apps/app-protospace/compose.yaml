@@ -1,5 +1,5 @@
 # Operator-approved topology. Installed under /etc/loftet-deploy/apps/app-protospace/.
-# Tailscale Serve forwards HTTPS on the host's tailnet address to loopback:3210.
+# Existing private Traefik forwards HTTPS to the fixed gateway.
 services:
   app:
     image: loftet-deploy/app-protospace:bootstrap
@@ -40,6 +40,13 @@ services:
     security_opt: [no-new-privileges:true]
     ports: ["127.0.0.1:3210:3000"]
     networks: [sandbox, ingress]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: server-infrastructure_tailnet-egress
+      traefik.http.routers.app-protospace.rule: Host(`app-protospace.dev.demokratiloftet.no`)
+      traefik.http.routers.app-protospace.entrypoints: websecure
+      traefik.http.routers.app-protospace.tls.certresolver: letsencrypt
+      traefik.http.services.app-protospace.loadbalancer.server.port: "3000"
     mem_limit: 64m
     cpus: 0.25
     pids_limit: 32
@@ -64,4 +71,6 @@ networks:
   sandbox:
     internal: true
     enable_ipv6: false
-  ingress: {}
+  ingress:
+    external: true
+    name: server-infrastructure_tailnet-egress
