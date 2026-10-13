@@ -25,6 +25,7 @@ jobs:
       - name: Scan Git history for secrets
         run: bash .github/scripts/scan-secrets.sh
       - run: python3 deploy/test_receive.py
+      - run: python3 deploy/test_sandbox.py
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm run format:check
