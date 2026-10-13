@@ -20,7 +20,7 @@ For repository `REPO` in the `demokratiloftet` organisation:
      --project-directory /etc/loftet-deploy/apps/REPO \
      -f /etc/loftet-deploy/apps/REPO/compose.yaml \
      -f /var/lib/loftet-deploy/REPO/image.json \
-     up -d --no-build --wait app
+     up -d --no-build --wait
    ```
 
 7. Verify loopback health, then record actual source SHA and image in `current.json`. Do not invent a baseline. Enable **Tailscale Serve**, not Funnel, on an unused port. The example reserves HTTPS **8444**, forwarding to `http://127.0.0.1:3210`:
@@ -38,7 +38,7 @@ For repository `REPO` in the `demokratiloftet` organisation:
 
 The global existing deploy lock serializes changes. The runtime Compose comes from `/etc`, not the app's commit. GitHub's short-lived read token is transported as in the existing deployment protocol. A failed container healthcheck or loopback smoke test restores the previous image. Application merges cannot create another registration or change Serve, DNS or shared topology.
 
-The example has an internal-only Docker network, loopback binding, no volumes, uid 1000, dropped capabilities, read-only root filesystem, 256 MiB memory, 0.5 CPU, 100 PIDs and rotating logs. Docker's host/DNS are trusted; internal networking is not claimed to prevent every possible egress channel. Do not connect it to shared PDS/database networks to fix connectivity.
+The app has an internal-only Docker network, no ports or volumes, uid 1000, dropped capabilities, read-only root filesystem, 256 MiB memory, 0.5 CPU, 100 PIDs and rotating logs. A fixed TCP gateway forwards loopback:3210 to `app:3000`; only the gateway joins the ingress network, with 64 MiB / 0.25 CPU and a read-only mount of the operator-owned `gateway.mjs`. Install that file mode 0644; Compose and registration can remain 0600. Docker does not publish ports from this internal-only app network, so the gateway is necessary. Ordinary app deploys recreate only `app`. Docker's host/DNS and the fixed proxy are trusted; internal networking is not claimed to prevent every possible egress channel. Do not connect the app to shared PDS/database networks to fix connectivity.
 
 ## Rollback and removal
 

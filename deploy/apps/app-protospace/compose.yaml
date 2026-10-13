@@ -9,7 +9,6 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    ports: ["127.0.0.1:3210:3000"]
     networks: [sandbox]
     mem_limit: 256m
     cpus: 0.5
@@ -29,7 +28,40 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
+  gateway:
+    image: node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532
+    command: [node, /gateway.mjs]
+    volumes: ["./gateway.mjs:/gateway.mjs:ro"]
+    init: true
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports: ["127.0.0.1:3210:3000"]
+    networks: [sandbox, ingress]
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 32
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 networks:
   sandbox:
     internal: true
     enable_ipv6: false
+  ingress: {}
