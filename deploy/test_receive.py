@@ -53,7 +53,7 @@ class SandboxRegistration(unittest.TestCase):
             config = target / 'target.json'
             config.write_text(json.dumps({'branch': 'main', 'port': 3210}))
             self.assertEqual(receiver.sandbox_target('hello', Path(directory)), {'branch': 'main', 'port': 3210})
-            for value in [{'branch': 'main', 'port': 22}, {'branch': '--upload-pack=sh', 'port': 3210},
+            for value in [{'branch': 'main', 'port': 22}, {'branch': '--upload-pack=sh', 'port': 3210}, {'branch': '--force', 'port': 3210},
                           {'branch': 'main', 'port': True}, {'branch': 'main', 'port': 3210, 'command': 'sh'}]:
                 config.write_text(json.dumps(value))
                 with self.assertRaises(ValueError):

@@ -28,7 +28,7 @@ def sandbox_target(repo, directory=SANDBOX_CONFIG):
     if not path.exists():
         return None
     config = json.loads(path.read_text())
-    if set(config) != {'branch', 'port'} or not re.fullmatch(r'[a-zA-Z0-9_/-]+', config['branch']):
+    if set(config) != {'branch', 'port'} or not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_/-]*', config['branch']):
         raise ValueError('Invalid sandbox registration')
     if type(config['port']) is not int or not 1024 <= config['port'] <= 65535:
         raise ValueError('Invalid sandbox port')
