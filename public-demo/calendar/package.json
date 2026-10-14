@@ -34,7 +34,7 @@
     "@types/node": "24.19.1",
     "@types/oidc-provider": "9.12.1",
     "esbuild": "0.28.2",
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "typescript": "7.0.2"
   }
 }
