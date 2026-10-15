@@ -95,3 +95,7 @@ These are synthetic-data demos. Spaces is experimental authorization, not
 end-to-end encryption. Authentication/handle ownership is not proof of real
 organisation membership. No review can certify all future code or dependencies
 as safe; tests and audits must remain part of each change.
+
+## License
+
+Licensed under [MIT](LICENSE).
