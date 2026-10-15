@@ -6,11 +6,11 @@ Denne guiden er for Edvin og ligger i infrastrukturrepoet, utenfor den offentlig
 
 ## Anbefal ett av tre oppsett
 
-| Deltakerens behov                             | Anbefaling                                                                                                                    |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Vil raskt i gang og har/får Tailscale-tilgang | Felles hackathon-PDS, egen syntetisk testkonto per team. Appen kan kjøre lokalt hele dagen.                                   |
-| Vil eksperimentere selvstendig og har Docker  | `local-sandbox`: gi GitHub-tilgang til det private repoet. Ingen Tailscale; kontoer, DIDs og records nullstilles ved restart. |
-| Har allerede en PDS og et oppsett             | La dem bruke det. Bruk deres PDS-adresse og en testkonto.                                                                     |
+| Deltakerens behov                             | Anbefaling                                                                                                                 |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Vil raskt i gang og har/får Tailscale-tilgang | Felles hackathon-PDS, egen syntetisk testkonto per team. Appen kan kjøre lokalt hele dagen.                                |
+| Vil eksperimentere selvstendig og har Docker  | `local-sandbox`: offentlig repo som kan klones direkte. Ingen Tailscale; kontoer, DIDs og records nullstilles ved restart. |
+| Har allerede en PDS og et oppsett             | La dem bruke det. Bruk deres PDS-adresse og en testkonto.                                                                  |
 
 Felles PDS er standardtilbudet, ikke et krav. Den gir deltakerne mindre lokalt oppsett og gjør det enklere å prøve apper mot hverandres records. Vanlige records kan leses av andre som når PDS-en; separate teamkontoer gir separate skriveidentiteter, ikke private leserom. Bruk testdata.
 
@@ -20,7 +20,7 @@ Si: «Du kan bruke vår test-PDS, kjøre en lokal sandkasse eller bruke din egen
 
 - [app-protospace PR 1](https://github.com/demokratiloftet/app-protospace/pull/1) er merget. Opprett nye repoer fra den oppdaterte templaten; `.env`-støtten og veiledningene ligger på `main`.
 - Sørg for en fungerende måte å gi deltakerne Tailscale-tilgang til riktig nettverk. Tailscale på egen maskin er ikke nok; tilgangen må også være gitt.
-- Hvis lokal sandkasse tilbys, avklar GitHub-tilgang til `demokratiloftet/local-sandbox`. Repoet er fortsatt privat.
+- Del [local-sandbox](https://github.com/demokratiloftet/local-sandbox) med dem som vil ha lokal PDS. Repoet er offentlig; de trenger Docker og Node.js, men ingen GitHub-invitasjon.
 - På en Tailscale-tilkoblet maskin, sjekk:
 
 ```sh
@@ -137,7 +137,7 @@ Avtal etter arrangementet hvem som eier appen, hvor lenge den skal kjøre, og hv
 | Timeout mot felles PDS                           | Kontroller Tailscale-tilgang på deltakerens maskin.                                                                               |
 | PDS er tilgjengelig, men innlogging feiler       | Sjekk at handle og apppassord hører til valgt PDS. Ikke bruk lokale fixture-kontoer på felles PDS.                                |
 | `.env` ser riktig ut, men appen bruker noe annet | Restart `pnpm dev`; allerede eksporterte shell-variabler overstyrer `.env`.                                                       |
-| Lokal sandbox kan ikke klones                    | Repoet er privat; gi GitHub-tilgang eller bruk felles PDS.                                                                        |
+| Lokal sandbox kan ikke klones                    | Repoet er offentlig. Sjekk repo-URL, Git og nettforbindelse; det kreves ingen invitasjon.                                         |
 | Lokal port er opptatt                            | `DEV_PORT=5174 API_PORT=3001 pnpm dev`; åpne port 5174.                                                                           |
 | Felles PDS svarer ikke for noen                  | Sjekk `docker inspect` for `hackathon-pds-1` og infrastrukturen. Ikke nullstill PDS eller endre nettverksgrensene som en snarvei. |
 
