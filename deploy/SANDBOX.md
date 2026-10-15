@@ -70,7 +70,7 @@ The receiver accepts only current default-branch HEAD, checks protected deployme
 
 The example uses `app-protospace.hackaton.demokratiloftet.no`; its old `app-protospace.dev.demokratiloftet.no` URL remains an alias. The apex `hackaton.demokratiloftet.no` is an alias for this start page. New app registrations need no further DNS or certificate changes.
 
-Public publication remains a reviewed operator change to the existing public gateway's exact host allowlist, routing/firewall, TLS and DNS, following the app's `docs/public-apps.md`. Automatic public publication is not implemented. Never point the wildcard at the public IP or forward the complete private proxy/PDS publicly to publish one app. Keep other apps and the test PDS private.
+Public publication remains an explicit operator change to the existing public gateway's exact host allowlist, routing/firewall, TLS and DNS. The three reviewed template/sports examples use [PUBLIC-HACKATHON.md](PUBLIC-HACKATHON.md). New apps still start private; automatic public publication is not implemented. Never point the wildcard at the public IP or forward the complete private proxy/PDS publicly to publish one app. Keep other apps and the test PDS private.
 
 ## Rollback and retirement
 
