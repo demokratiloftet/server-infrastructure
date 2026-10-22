@@ -27,5 +27,5 @@ for service in ['pds','plc','bsky','public-calendar','public-gateway']:
 for service in ['relay','jetstream']:
     cid=subprocess.check_output(compose+['ps','-q',service],text=True).strip()
     print('Checking '+service+' network namespace',flush=True)
-    subprocess.run(['docker','run','--rm','-i','--network','container:'+cid,'--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--user','node','node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532','node','--input-type=module','-'],input=script,text=True,check=True)
+    subprocess.run(['docker','run','--rm','-i','--network','container:'+cid,'--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--user','node','node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205','node','--input-type=module','-'],input=script,text=True,check=True)
 print('PASS running Docker topology and outbound restrictions.')

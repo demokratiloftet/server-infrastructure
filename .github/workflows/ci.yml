@@ -21,10 +21,12 @@ jobs:
           submodules: recursive
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "24.17.0"
+          node-version: "24.22.1"
       - name: Scan Git history for secrets
         run: bash .github/scripts/scan-secrets.sh
       - run: python3 deploy/test_receive.py
+      - run: python3 deploy/test_sandbox.py
+      - run: python3 deploy/test_public_hackathon.py
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm run format:check

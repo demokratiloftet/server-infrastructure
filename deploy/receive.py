@@ -17,6 +17,22 @@ TARGETS = {
     'calendar-app': ('master', 'public-calendar', 'Dockerfile.public'),
     'organisation-verifier': ('main', 'app', 'Dockerfile'),
 }
+SANDBOX_CONFIG = Path('/etc/loftet-deploy/apps')
+
+
+def sandbox_target(repo, directory=SANDBOX_CONFIG):
+    """Read operator-owned registration, never topology from application source."""
+    if not re.fullmatch(r'[a-z][a-z0-9-]{0,62}', repo):
+        raise ValueError('Invalid repository name')
+    path = directory / repo / 'target.json'
+    if not path.exists():
+        return None
+    config = json.loads(path.read_text())
+    if set(config) != {'branch', 'port'} or not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_/-]*', config['branch']):
+        raise ValueError('Invalid sandbox registration')
+    if type(config['port']) is not int or not 1024 <= config['port'] <= 65535:
+        raise ValueError('Invalid sandbox port')
+    return config
 
 
 def requested_sha(command):
@@ -53,12 +69,24 @@ def capture(*args, **kwargs):
     return subprocess.check_output(args, text=True, **kwargs).strip()
 
 
+def require_patched_node(image):
+    # Inspect the candidate before changing image.json or touching running services.
+    run('docker', 'run', '--rm', '--network', 'none', '--entrypoint', 'node', image,
+        '-e', "const v=process.versions.node.split('.').map(Number);"
+        "const min={22:[23,4],24:[22,1],26:[12,1]}[v[0]];"
+        "if(!min || v[1]<min[0] || (v[1]===min[0] && v[2]<min[1]))"
+        "{console.error('Node runtime lacks the October 2026 security baseline');process.exit(1)}")
+
+
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in TARGETS:
+    if len(sys.argv) != 2:
         raise ValueError('Unknown deployment target')
     repo = sys.argv[1]
+    sandbox = sandbox_target(repo) if repo not in TARGETS else None
+    if repo not in TARGETS and sandbox is None:
+        raise ValueError('Unknown deployment target')
     sha = requested_sha(os.environ.get('SSH_ORIGINAL_COMMAND', ''))
-    branch, service, dockerfile = TARGETS[repo]
+    branch, service, dockerfile = (sandbox['branch'], 'app', 'Dockerfile') if sandbox else TARGETS[repo]
     root = BASE / repo
     source = root / 'source'
     # All apps share one VPS: serialize builds and cutovers across repositories.
@@ -99,10 +127,15 @@ def main():
                 tar.extractall(release, filter='data')
         image = f'loftet-deploy/{repo}:{sha}'
         # Build from source only, before any live environment files are involved.
-        run('docker', 'build', '--tag', image, '--file', str(release / dockerfile), str(release))
+        run('docker', 'build', '--build-arg', f'APP_REVISION={sha}', '--tag', image, '--file', str(release / dockerfile), str(release))
+        require_patched_node(image)
         override = root / 'image.json'
         override.write_text(json.dumps({'services': {service: {'image': image}}}))
-        if repo == 'organisation-verifier':
+        if sandbox:
+            compose = ['docker', 'compose', '-p', f'protospace-{repo}',
+                       '--project-directory', str(SANDBOX_CONFIG / repo),
+                       '-f', str(SANDBOX_CONFIG / repo / 'compose.yaml'), '-f', str(override)]
+        elif repo == 'organisation-verifier':
             compose = ['docker', 'compose', '-p', 'organisation-verifier', '--project-directory', '/root/organisation-verifier',
                        '-f', '/root/organisation-verifier/compose.yaml', '-f', str(override)]
         else:
@@ -111,7 +144,10 @@ def main():
         # Keep the old image and do not remove volumes, migrate a PDS, or restart dependencies.
         try:
             run(*compose, 'up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '90', service)
-            if repo != 'organisation-verifier':
+            if sandbox:
+                run('curl', '--fail', '--silent', '--show-error', '--max-time', '20',
+                    f'http://127.0.0.1:{sandbox["port"]}/health', stdout=subprocess.DEVNULL)
+            elif repo != 'organisation-verifier':
                 host = 'demo-social' if repo == 'loftet-social' else 'demo-calendar'
                 run('curl', '--fail', '--silent', '--show-error', '--max-time', '20',
                     f'https://{host}.dev.demokratiloftet.no/', stdout=subprocess.DEVNULL)

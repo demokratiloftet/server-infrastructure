@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the public hackathon app certificate export
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+RandomizedDelaySec=1min
+
+[Install]
+WantedBy=timers.target
