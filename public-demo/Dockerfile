@@ -1,4 +1,4 @@
-FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532 AS typescript
+FROM node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS typescript
 WORKDIR /source
 COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci --ignore-scripts
@@ -7,7 +7,7 @@ COPY spaces-demo ./spaces-demo
 COPY scripts ./scripts
 RUN npm run build
 
-FROM node:22-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2 AS social-build
+FROM node:22.23.4-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS social-build
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates python3 make g++ && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 RUN git init && git remote add origin https://github.com/eurosky-social/social-app.git && git fetch --depth=1 origin 97788ff94232ae9da0b5cd2a5411474f9f2805fd && git checkout --detach FETCH_HEAD
@@ -22,7 +22,7 @@ ARG FEED_OWNER_DID
 ENV EXPO_PUBLIC_LOCAL_PDS=$PDS_HOST EXPO_PUBLIC_APPVIEW_DOMAIN=$PDS_HOST EXPO_PUBLIC_PUBLIC_APPVIEW_DOMAIN=$PDS_HOST EXPO_PUBLIC_BLUESKY_PROXY_DID=did:web:bsky.$DEMO_BASE_DOMAIN EXPO_PUBLIC_FEED_OWNER_DID=$FEED_OWNER_DID EXPO_PUBLIC_ENV=production
 RUN test -n "$PDS_HOST" && test -n "$DEMO_BASE_DOMAIN" && yarn intl:compile && yarn build-web
 
-FROM node:24.17.0-bookworm-slim@sha256:862263c612aa437e3037674b85419622a9d93bff80aa1eee5398dfe686375532
+FROM node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
 RUN apt-get update && apt-get install -y --no-install-recommends iptables util-linux && rm -rf /var/lib/apt/lists/*
 WORKDIR /demo
 COPY package.json ./

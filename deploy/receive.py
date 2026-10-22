@@ -69,6 +69,15 @@ def capture(*args, **kwargs):
     return subprocess.check_output(args, text=True, **kwargs).strip()
 
 
+def require_patched_node(image):
+    # Inspect the candidate before changing image.json or touching running services.
+    run('docker', 'run', '--rm', '--network', 'none', '--entrypoint', 'node', image,
+        '-e', "const v=process.versions.node.split('.').map(Number);"
+        "const min={22:[23,4],24:[22,1],26:[12,1]}[v[0]];"
+        "if(!min || v[1]<min[0] || (v[1]===min[0] && v[2]<min[1]))"
+        "{console.error('Node runtime lacks the October 2026 security baseline');process.exit(1)}")
+
+
 def main():
     if len(sys.argv) != 2:
         raise ValueError('Unknown deployment target')
@@ -119,6 +128,7 @@ def main():
         image = f'loftet-deploy/{repo}:{sha}'
         # Build from source only, before any live environment files are involved.
         run('docker', 'build', '--build-arg', f'APP_REVISION={sha}', '--tag', image, '--file', str(release / dockerfile), str(release))
+        require_patched_node(image)
         override = root / 'image.json'
         override.write_text(json.dumps({'services': {service: {'image': image}}}))
         if sandbox:

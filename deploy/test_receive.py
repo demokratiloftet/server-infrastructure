@@ -38,6 +38,18 @@ class RollbackRecord(unittest.TestCase):
         self.assertEqual(receiver.deployment_record('new', 'app:new', previous)['previous'], 'app:old')
         self.assertEqual(receiver.deployment_record('newer', 'app:newer', previous)['previous'], 'app:new')
 
+class RuntimeBaseline(unittest.TestCase):
+    def test_candidate_runtime_failure_is_propagated(self):
+        failure = subprocess.CalledProcessError(1, ['docker', 'run'])
+        with patch.object(receiver, 'run', side_effect=failure) as run:
+            with self.assertRaises(subprocess.CalledProcessError):
+                receiver.require_patched_node('app:unpatched')
+        args = run.call_args.args
+        self.assertIn('--network', args)
+        self.assertIn('none', args)
+        self.assertIn('app:unpatched', args)
+
+
 class SandboxRegistration(unittest.TestCase):
     def test_unknown_target_and_path_escape(self):
         with tempfile.TemporaryDirectory() as directory:

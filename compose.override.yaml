@@ -42,18 +42,33 @@ services:
   bsky:
     # bsky-latest ships package.json "type": "module" with a CommonJS
     # api-zeppelin.js; pinned back to the last build without that regression.
-    image: ghcr.io/eurosky-social/atproto:bsky-2026-04-20T13-43-57-00-00@sha256:c097936d51b4c3eebdecdde57528f3e17735af23e95784b3c7fba8c46ee1c597
+    image: loftet-node-patched/bsky:22.23.4
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.node-runtime
+      args:
+        BASE_IMAGE: ghcr.io/eurosky-social/atproto:bsky-2026-04-20T13-43-57-00-00@sha256:c097936d51b4c3eebdecdde57528f3e17735af23e95784b3c7fba8c46ee1c597
+        NODE_RUNTIME: node:22.23.4-alpine3.23@sha256:6abbcf5dd6b231da109bcde1181db1d92bf78015ae1a9514d9807c1f857869db
+        FINAL_USER: node
     environment:
       BSKY_ADMIN_PASSWORDS: ${BSKY_ADMIN_PASSWORD:?Set BSKY_ADMIN_PASSWORD in .env}
       BSKY_SERVICE_SIGNING_KEY: ${BSKY_SERVICE_SIGNING_KEY:?Set BSKY_SERVICE_SIGNING_KEY in .env}
   bsky-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   e2e-jest:
-    image: node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+    image: node:22.23.4-alpine3.23@sha256:6abbcf5dd6b231da109bcde1181db1d92bf78015ae1a9514d9807c1f857869db
   e2e-playwright:
     image: mcr.microsoft.com/playwright:v1.55.1-noble@sha256:2f29369043d81d6d69a815ceb80760f55e85f5020371ad06a4d996f18503ad1c
   feedgen:
-    image: ghcr.io/eurosky-social/feed-generator:feedgen-latest@sha256:1885a206205431a3447b7273e4eb8e589a2194717fca4fd62eb82a167c346627
+    image: loftet-node-patched/feedgen:22.23.4
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.node-runtime
+      args:
+        BASE_IMAGE: ghcr.io/eurosky-social/feed-generator:feedgen-latest@sha256:1885a206205431a3447b7273e4eb8e589a2194717fca4fd62eb82a167c346627
+        NODE_RUNTIME: node:22.23.4-alpine3.23@sha256:6abbcf5dd6b231da109bcde1181db1d92bf78015ae1a9514d9807c1f857869db
+        FINAL_USER: root
+        REBUILD_SQLITE: "1"
   feedgen-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   feedgen-post-setup:
@@ -65,7 +80,14 @@ services:
   otel:
     image: otel/opentelemetry-collector-contrib:latest@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
   ozone:
-    image: ghcr.io/bluesky-social/ozone:latest@sha256:a783cd27fe343276b6826d9f81a9221b815f24bece001c53ce15a65c4318f7ed
+    image: loftet-node-patched/ozone:22.23.4
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.node-runtime
+      args:
+        BASE_IMAGE: ghcr.io/bluesky-social/ozone:latest@sha256:a783cd27fe343276b6826d9f81a9221b815f24bece001c53ce15a65c4318f7ed
+        NODE_RUNTIME: node:22.23.4-alpine3.23@sha256:6abbcf5dd6b231da109bcde1181db1d92bf78015ae1a9514d9807c1f857869db
+        FINAL_USER: node
     environment:
       OZONE_ADMIN_PASSWORD: ${OZONE_ADMIN_PASSWORD:?Set OZONE_ADMIN_PASSWORD in .env}
       OZONE_SIGNING_KEY_HEX: ${OZONE_SIGNING_KEY_HEX:?Set OZONE_SIGNING_KEY_HEX in .env}
@@ -80,7 +102,14 @@ services:
   pds-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   plc:
-    image: ghcr.io/eurosky-social/did-method-plc:latest@sha256:69c74075e7da7b2f788783004d87f460cf5fe4dbd3c5bc207be34b751e1b3c25
+    image: loftet-node-patched/plc:22.23.4
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.node-runtime
+      args:
+        BASE_IMAGE: ghcr.io/eurosky-social/did-method-plc:latest@sha256:69c74075e7da7b2f788783004d87f460cf5fe4dbd3c5bc207be34b751e1b3c25
+        NODE_RUNTIME: node:22.23.4-alpine3.23@sha256:6abbcf5dd6b231da109bcde1181db1d92bf78015ae1a9514d9807c1f857869db
+        FINAL_USER: node
   plc-https-check:
     image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
   postgres:
