@@ -27,7 +27,7 @@
     "@loftet/auth": "file:vendor/loftet-auth-0.3.0.tgz",
     "@loftet/identity": "file:vendor/loftet-identity-0.3.0.tgz",
     "jose": "6.2.12",
-    "oidc-provider": "9.12.2",
+    "oidc-provider": "9.13.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
